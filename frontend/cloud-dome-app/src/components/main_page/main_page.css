@@ -1,0 +1,331 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Ensure the body takes up at least the full viewport height */
+    margin: 0; /* Reset default body margin */
+}
+
+.main-container {
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  flex-grow: 1; /* Allow main-container to take up remaining space */
+}
+
+.header {
+  min-width: 100vh;
+  width: 100%;
+  height: 700px;
+  background: linear-gradient(to right top, #006EDC, rgba(42, 172, 234, 1) 75%);
+  position: absolute;/* Kept fixed to stay at top */
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 10; /* Ensure header stays above content */
+}
+
+.footer {
+    background-color: #0d1b29;
+    padding: 20px;
+    min-width: 100vh;
+    width: 98.4%;
+    z-index: 10; /* Ensure it's above other content if needed */
+    margin-left: -10px;
+    margin-bottom: -10px;
+}
+
+.footer-copyright {
+    display: flex;
+    justify-content: center;
+    text-align: center; /* Optional: center the text within the footer */
+}
+  
+.footer p {
+    font-size: 14px; 
+    color: rgb(255, 255, 255)
+}
+
+.top-nav {
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top-left-nav {
+    display: flex;
+    flex-direction: row;
+}
+
+.logo {
+    color: white;
+    font-size: 30px;
+    font-weight: bold;
+    background: none; /* remove default button background */
+    border: none; /* remove default button border */
+    padding: 0; /*remove default padding*/
+    cursor: pointer; /*make sure it appears clickable*/
+    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; /*inherit font*/
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  margin-left: 20px;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.dropdown-toggle:hover {
+  color: #e6f3fa;
+}
+
+.arrow {
+  margin-left: 5px;
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.arrow.flipped {
+  transform: rotate(180deg);
+}
+
+.resources-dropdown-menu {
+  position: absolute;
+  top: calc(100%);
+  right: 0;
+  background: white;
+  min-width: 160px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  z-index: 1;
+  border-radius: 4px;
+}
+
+.resources-dropdown-menu a {
+  display: block;
+  padding: 10px 15px;
+  margin: 0;
+  font-size: 14px;
+  color: #006EDC;
+}
+
+.resources-dropdown-menu a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.header-content {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between; /* Important: keeps space between text and image */
+}
+
+.text-container {
+  text-align: left;
+  color: white;
+}
+
+.page-title {
+  font-size: 39px;
+  font-weight: bold;
+  margin-left: 120px;
+  margin-bottom: 20px;
+  padding: 120px 40px 0;
+}
+
+.title-description {
+  font-size: 22px;
+  margin-bottom: 30px;
+  margin-left: 120px;
+  padding: 0px 40px 0;
+}
+
+.title-button-wrapper {
+    padding: 0px 40px 0;
+}
+
+.title-button {
+  background: white;
+  color: #006EDC;
+  border: none;
+  padding: 15px 30px;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  margin-left: 120px;
+}
+
+.title-button:hover {
+  transform: translateY(-2px);
+}
+  
+.main-image {
+    width: 800px;
+    height: 450px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px 0 0 10px;
+    margin-top: 80px; /* Adjust this value to push it down */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.icon-image {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+/* New styles for scrollable content */
+.main-content {
+  display: flex;
+  flex-direction: column; /* Changed to column to stack sections vertically */
+  align-items: center; /* Center the sections horizontally */
+  margin-top: 700px; /* Offset for fixed header height */
+  padding: 40px;
+  
+}
+
+.clouddome-impact {
+  margin-bottom: 110px;
+  width: 60%;
+}
+
+.clouddome-impact p {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* New styles for the process steps (from screenshot) */
+.process-steps-section {
+  width: 60%; /* Match the width of clouddome-impact for consistency */
+  margin-bottom: 40px; /* Add some spacing below the section */
+
+}
+
+.process-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.step-number.active {
+  background-color: #006EDC;
+  color: white;
+}
+
+.step-connector {
+  flex-grow: 1;
+  height: 2px;
+  background-color: #ccc;
+  margin: 0 10px;
+}
+
+.step-label {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Styles for the new AWS account ID section */
+.aws-account-section {
+    width: 60%; /* Match the width of other sections for consistency */
+    margin-bottom: 40px; /* Add spacing below the section */
+    text-align: center; /* Center the content */
+    border: 2px solid #0d1b29; /* Add a solid black outline */
+    padding: 20px; /* Add padding inside the box for spacing */
+    border-radius: 5px; /* Optional: slight rounding for a softer look */
+  }
+  
+  .aws-account-title {
+    font-size: 24px; /* Slightly smaller than the page title but still prominent */
+    font-weight: bold;
+    color: #333; /* Dark color for contrast */
+    margin-bottom: 20px; /* Space between title and input */
+  }
+  
+  .aws-account-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center the input and button */
+  }
+  
+  .aws-account-input {
+    width: 300px; /* Fixed width for the input field */
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc; /* Light border for the input */
+    border-radius: 5px;
+    margin-bottom: 15px; /* Space between input and button */
+    font-family: 'Open Sans', sans-serif; /* Match the font */
+  }
+  
+  .aws-account-input:focus {
+    outline: none;
+    border-color: #006EDC; /* Highlight the input on focus with the brand color */
+    box-shadow: 0 0 5px rgba(0, 110, 220, 0.3); /* Subtle glow effect */
+  }
+  
+  .aws-account-submit {
+    background-color: #006EDC; /* Match the brand blue color */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer; /* Indicate it's clickable */
+    transition: background-color 0.3s ease; /* Smooth hover effect */
+  }
+  
+  .aws-account-submit:hover {
+    background-color: #005BB5; /* Slightly darker blue on hover */
+  }
+
+  /* Style for the error message */
+.error-message {
+    color: #d32f2f; /* Red color for error */
+    font-size: 14px;
+    margin-top: 2px;
+    font-family: 'Open Sans', sans-serif;
+  }
