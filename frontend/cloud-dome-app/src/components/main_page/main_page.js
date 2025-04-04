@@ -23,18 +23,45 @@ export default {
           awsInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       },
-    // New method to validate AWS Account ID
-    validateAwsId() {
-      // Regular expression for ####-####-#### format (where # is a digit)
-      const awsIdPattern = /^\d{4}-\d{4}-\d{4}$/;
-
-      // Test the input against the pattern
-      if (!awsIdPattern.test(this.awsAccountId)) {
-        this.awsIdError = 'Invalid AWS ID. Please try again.';
-      } else {
-        this.awsIdError = ''; // Clear the error if the format is valid
-      }
-    },
+      // Updated method to validate AWS Account ID
+    async validateAwsId() {
+        // Regular expression for ####-####-#### format (where # is a digit)
+        const awsIdPattern = /^\d{4}-\d{4}-\d{4}$/;
+  
+        // First, check the format
+        if (!awsIdPattern.test(this.awsAccountId)) {
+          this.awsIdError = 'Invalid AWS ID. Try again please.';
+          return; // Exit early if the format is invalid
+        }
+  
+        // If the format is valid, call the backend to check if the AWS Account ID exists
+        try {
+          const response = await fetch('http://localhost:3000/api/check-aws-id', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ awsAccountId: this.awsAccountId }),
+          });
+  
+          const data = await response.json();
+  
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to check AWS Account ID');
+          }
+  
+          // Check the response from the backend
+          if (!data.exists) {
+            this.awsIdError = 'AWS Account ID not found.';
+          } else {
+            // initiate all processes here
+            this.awsIdError = ''; // Clear the error if the ID exists
+          }
+        } catch (error) {
+          console.error('Error checking AWS Account ID:', error);
+          this.awsIdError = 'Error checking AWS Account ID. Please try again.';
+        }
+      },
     }
 }
 
