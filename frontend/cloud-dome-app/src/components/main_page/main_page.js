@@ -1,21 +1,26 @@
+/* eslint-disable */
 export default {
-    name: 'MainPage',
     data() {
       return {
         isDropdownOpen: false,
-        timeoutId: null,
+        awsAccountId: '',
+        awsAccessKey: '',
+        awsSecretKey: '',
+        awsSessionToken: '',
         awsIdError: '',
-      }
+        showProgress: false, // Controls visibility of progress bar
+        progressWidth: 0, // Percentage width of the progress bar
+        progressMessage: '', // Message above the progress bar
+        isScanning: false, // Tracks step 2 progress
+        isDone: false, // Tracks step 3 progress
+      };
     },
     methods: {
       showDropdown() {
-        clearTimeout(this.timeoutId)
-        this.isDropdownOpen = true
+        this.isDropdownOpen = true;
       },
       hideDropdown() {
-        this.timeoutId = setTimeout(() => {
-          this.isDropdownOpen = false
-        }, 200)
+        this.isDropdownOpen = false;
       },
       scrollToAwsInput() {
         const awsInput = document.getElementById('aws-account-input');
@@ -23,25 +28,31 @@ export default {
           awsInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       },
-      // Updated method to validate AWS Account ID
-    async validateAwsId() {
-        // Regular expression for ####-####-#### format (where # is a digit)
-        const awsIdPattern = /^\d{4}-\d{4}-\d{4}$/;
+      async validateAwsId() {
+        const awsIdPattern = /^\d{12}$/;
   
-        // First, check the format
         if (!awsIdPattern.test(this.awsAccountId)) {
           this.awsIdError = 'Invalid AWS ID. Try again please.';
-          return; // Exit early if the format is invalid
+          return;
         }
   
-        // If the format is valid, call the backend to check if the AWS Account ID exists
+        if (!this.awsAccessKey || !this.awsSecretKey) {
+          this.awsIdError = 'Access Key ID and Secret Access Key are required.';
+          return;
+        }
+  
         try {
-          const response = await fetch('http://localhost:3000/api/check-aws-id', {
+          const response = await fetch('http://localhost:3000/api/check-aws-info', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ awsAccountId: this.awsAccountId }),
+            body: JSON.stringify({
+              awsAccountId: this.awsAccountId,
+              awsAccessKey: this.awsAccessKey,
+              awsSecretKey: this.awsSecretKey,
+              awsSessionToken: this.awsSessionToken || undefined,
+            }),
           });
   
           const data = await response.json();
@@ -50,20 +61,48 @@ export default {
             throw new Error(data.error || 'Failed to check AWS Account ID');
           }
   
-          // Check the response from the backend
           if (!data.exists) {
             this.awsIdError = 'AWS Account ID not found.';
           } else {
-            // initiate all processes here
-            this.awsIdError = ''; // Clear the error if the ID exists
+            this.awsIdError = '';
+            this.startProgress(); // Start progress bar on successful validation
           }
         } catch (error) {
           console.error('Error checking AWS Account ID:', error);
           this.awsIdError = 'Error checking AWS Account ID. Please try again.';
         }
       },
-    }
-}
+      startProgress() {
+        this.showProgress = true;
+        this.isScanning = true; // Activate step 2
+        const messages = [
+          'Scanning AWS services...',
+          'Checking security measures...',
+          'Extracting data...',
+          'Creating charts...',
+          'Calculating Security Score...',
+        ];
+        let step = 0;
+        this.progressWidth = 0;
+  
+        const interval = setInterval(() => {
+          this.progressWidth += 20; // Increase by 20% every 2 seconds
+          this.progressMessage = messages[step];
+          step++;
+  
+          if (step >= messages.length) {
+            clearInterval(interval);
+            this.isScanning = false;
+            this.isDone = true; // Activate step 3
+            setTimeout(() => {
+              this.showProgress = false;
+              this.$router.push('/results');
+            }, 500); // Wait 0.5 seconds after completion
+          }
+        }, 2000); // Update every 2 seconds
+      },
+    },
+  };
 
 document.addEventListener('DOMContentLoaded', () => {
     const logo = document.querySelector('.logo');

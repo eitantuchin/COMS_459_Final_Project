@@ -1,36 +1,55 @@
+process.env.AWS_SDK_JS_SUPPRESS_MAINTENANCE_MODE_MESSAGE = '1';
+
 const express = require('express');
-const cors = require('cors'); // To allow cross-origin requests from the frontend
+const cors = require('cors');
+const AWS = require('aws-sdk');
 
 const app = express();
-const port = 3000; // Port for the backend server
+const port = 3000;
 
-// Middleware to parse JSON requests and enable CORS
 app.use(express.json());
 app.use(cors());
 
-// Mock list of valid AWS Account IDs (for testing purposes)
-const validAwsIds = [
-  '1234-5678-9012',
-  '9876-5432-1098',
-  '4567-8901-2345',
-];
-
 // API endpoint to check if an AWS Account ID exists
-app.post('/api/check-aws-id', (req, res) => {
-  const { awsAccountId } = req.body; // Extract the AWS Account ID from the request body
+app.post('/api/check-aws-info', async (req, res) => {
+  const { awsAccountId, awsAccessKey, awsSecretKey, awsSessionToken } = req.body;
 
   if (!awsAccountId) {
     return res.status(400).json({ error: 'AWS Account ID is required' });
   }
 
-  // Mock check: see if the ID exists in the validAwsIds list
-  const idExists = validAwsIds.includes(awsAccountId);
+  if (!awsAccessKey || !awsSecretKey) {
+    return res.status(400).json({ error: 'Access Key ID and Secret Access Key are required' });
+  }
 
-  // Respond with a boolean indicating whether the ID exists
-  res.json({ exists: idExists });
+  try {
+
+    // Create an STS client with the user-provided credentials
+    const sts = new AWS.STS({
+      accessKeyId: awsAccessKey,
+      secretAccessKey: awsSecretKey,
+      sessionToken: awsSessionToken || undefined,
+    });
+
+    // Use STS to get the caller's identity with the provided credentials
+    const response = await sts.getCallerIdentity().promise();
+
+    // Check if the account ID matches
+    const idExists = response.Account === awsAccountId;
+
+    res.json({ exists: idExists });
+  } catch (error) {
+    console.error('Error verifying AWS Account ID:', error);
+
+    // If the credentials are invalid or the account doesn’t exist, return false
+    if (error.code === 'InvalidClientTokenId' || error.code === 'SignatureDoesNotMatch') {
+      res.json({ exists: false });
+    } else {
+      res.status(500).json({ exists: false });
+    }
+  }
 });
 
-// Start the server
 app.listen(port, () => {
   console.log(`Backend server running on http://localhost:${port}`);
 });
