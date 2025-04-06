@@ -1,16 +1,12 @@
 const AWS = require('aws-sdk');
 
-// Function to run all IAM security checks
 async function runIamChecks(credentials) {
-  const iam = new AWS.IAM({ ...credentials }); // IAM is a global service, no region needed
-
-  // Fetch necessary IAM data
-  const [usersResponse, policiesResponse, groupsResponse, mfaResponse, accountSummaryResponse] = await Promise.all([
+  const iam = new AWS.IAM({ ...credentials });
+  const [usersResponse, policiesResponse, groupsResponse, accountSummaryResponse] = await Promise.all([
     iam.listUsers().promise(),
-    iam.listPolicies({ Scope: 'Local' }).promise(), // Customer-managed policies
+    iam.listPolicies({ Scope: 'Local' }).promise(),
     iam.listGroups().promise(),
-    iam.getAccountSummary().promise(), // Includes MFA info
-    iam.getAccountSummary().promise(), // General account summary
+    iam.getAccountSummary().promise(),
   ]);
 
   const users = usersResponse.Users;
@@ -18,143 +14,132 @@ async function runIamChecks(credentials) {
   const groups = groupsResponse.Groups;
   const accountSummary = accountSummaryResponse.SummaryMap;
 
-  // Security Checks
   const checks = {
     totalChecks: 0,
     totalPassed: 0,
     details: [],
   };
 
-  // Helper function to add check result
-  const addCheck = (name, passed, message) => {
+  const assetsAtRiskSet = new Set();
+
+  const addCheck = (name, passed, message, assetIds = []) => {
     checks.totalChecks++;
     if (passed) checks.totalPassed++;
     checks.details.push({ name, passed, message });
+    if (!passed) assetIds.forEach(id => assetsAtRiskSet.add(id));
   };
 
-  // 1. Check if root user has MFA enabled
   const rootMfaEnabled = accountSummary['AccountMFAEnabled'] === 1;
   addCheck(
     'Root User MFA',
     rootMfaEnabled,
-    rootMfaEnabled
-      ? 'Root user has MFA enabled.'
-      : 'Root user does not have MFA enabled (critical security risk).'
+    rootMfaEnabled ? 'Root user has MFA enabled.' : 'Root user does not have MFA enabled.',
+    !rootMfaEnabled ? ['root'] : []
   );
 
-  // 2. Check if there are no access keys for the root user
   const rootAccessKeys = accountSummary['AccountAccessKeysPresent'] === 0;
   addCheck(
     'No Root Access Keys',
     rootAccessKeys,
-    rootAccessKeys
-      ? 'No access keys exist for the root user.'
-      : 'Root user has access keys (should be removed).'
+    rootAccessKeys ? 'No access keys exist for the root user.' : 'Root user has access keys.',
+    !rootAccessKeys ? ['root'] : []
   );
 
-  // 3. Check if all IAM users have MFA enabled
-  const allUsersMfa = users.every(async user => {
-    const mfaDevices = await iam.listMFADevices({ UserName: user.UserName }).promise();
-    return mfaDevices.MFADevices.length > 0;
-  });
-  const allUsersMfaResult = await Promise.all(users.map(async user => {
-    const mfaDevices = await iam.listMFADevices({ UserName: user.UserName }).promise();
-    return mfaDevices.MFADevices.length > 0;
-  }));
-  const allHaveMfa = allUsersMfaResult.every(result => result);
+  const allUsersMfaResult = await Promise.all(
+    users.map(async user => {
+      const mfaDevices = await iam.listMFADevices({ UserName: user.UserName }).promise();
+      return mfaDevices.MFADevices.length > 0;
+    })
+  );
+  const usersNoMfa = users.filter((_, i) => !allUsersMfaResult[i]);
   addCheck(
     'All Users MFA',
-    allHaveMfa,
-    allHaveMfa
+    usersNoMfa.length === 0,
+    usersNoMfa.length === 0
       ? 'All IAM users have MFA enabled.'
-      : `Some users (${users.filter((_, i) => !allUsersMfaResult[i]).map(u => u.UserName).join(', ')}) lack MFA.`
+      : `Some users (${usersNoMfa.map(u => u.UserName).join(', ')}) lack MFA.`,
+    usersNoMfa.map(u => u.UserName)
   );
 
-  // 4. Check if there are no active access keys older than 90 days
   const accessKeys = await Promise.all(users.map(user => iam.listAccessKeys({ UserName: user.UserName }).promise()));
   const now = new Date();
   const ninetyDaysAgo = new Date(now - 90 * 24 * 60 * 60 * 1000);
-  const noOldKeys = accessKeys.every(keys =>
-    keys.AccessKeyMetadata.every(key => new Date(key.CreateDate) > ninetyDaysAgo || key.Status === 'Inactive')
+  const usersOldKeys = users.filter((user, i) => 
+    accessKeys[i].AccessKeyMetadata.some(key => 
+      new Date(key.CreateDate) < ninetyDaysAgo && key.Status === 'Active'
+    )
   );
   addCheck(
     'No Old Access Keys',
-    noOldKeys,
-    noOldKeys
+    usersOldKeys.length === 0,
+    usersOldKeys.length === 0
       ? 'No active access keys older than 90 days.'
-      : 'Some access keys are older than 90 days and still active.'
+      : `Some users (${usersOldKeys.map(u => u.UserName).join(', ')}) have old active access keys.`,
+    usersOldKeys.map(u => u.UserName)
   );
 
-  // 5. Check if IAM users are assigned to groups (not direct policies)
-  const allUsersInGroups = users.every(async user => {
-    const groups = await iam.listGroupsForUser({ UserName: user.UserName }).promise();
-    return groups.Groups.length > 0;
-  });
-  const allUsersInGroupsResult = await Promise.all(users.map(async user => {
-    const groups = await iam.listGroupsForUser({ UserName: user.UserName }).promise();
-    return groups.Groups.length > 0;
-  }));
-  const allInGroups = allUsersInGroupsResult.every(result => result);
+  const allUsersInGroupsResult = await Promise.all(
+    users.map(async user => {
+      const groups = await iam.listGroupsForUser({ UserName: user.UserName }).promise();
+      return groups.Groups.length > 0;
+    })
+  );
+  const usersNotInGroups = users.filter((_, i) => !allUsersInGroupsResult[i]);
   addCheck(
     'Users in Groups',
-    allInGroups,
-    allInGroups
+    usersNotInGroups.length === 0,
+    usersNotInGroups.length === 0
       ? 'All users are assigned to groups.'
-      : 'Some users have direct policies instead of group assignments.'
+      : `Some users (${usersNotInGroups.map(u => u.UserName).join(', ')}) have direct policies.`,
+    usersNotInGroups.map(u => u.UserName)
   );
 
-  // 6. Check if there are no inline policies on users
-  const noInlinePolicies = users.every(async user => {
-    const policies = await iam.listUserPolicies({ UserName: user.UserName }).promise();
-    return policies.PolicyNames.length === 0;
-  });
-  const noInlinePoliciesResult = await Promise.all(users.map(async user => {
-    const policies = await iam.listUserPolicies({ UserName: user.UserName }).promise();
-    return policies.PolicyNames.length === 0;
-  }));
-  const noInline = noInlinePoliciesResult.every(result => result);
+  const noInlinePoliciesResult = await Promise.all(
+    users.map(async user => {
+      const policies = await iam.listUserPolicies({ UserName: user.UserName }).promise();
+      return policies.PolicyNames.length === 0;
+    })
+  );
+  const usersWithInline = users.filter((_, i) => !noInlinePoliciesResult[i]);
   addCheck(
     'No Inline User Policies',
-    noInline,
-    noInline
+    usersWithInline.length === 0,
+    usersWithInline.length === 0
       ? 'No users have inline policies.'
-      : 'Some users have inline policies (use managed policies instead).'
+      : `Some users (${usersWithInline.map(u => u.UserName).join(', ')}) have inline policies.`,
+    usersWithInline.map(u => u.UserName)
   );
 
-  // 7. Check if there are IAM groups defined
   const groupsExist = groups.length > 0;
   addCheck(
     'IAM Groups Exist',
     groupsExist,
-    groupsExist
-      ? 'IAM groups are defined.'
-      : 'No IAM groups exist (use groups for better management).'
+    groupsExist ? 'IAM groups are defined.' : 'No IAM groups exist.'
   );
 
-  // 8. Check if policies are least privilege (simplified: no overly permissive policies like '*')
-  const noOverlyPermissivePolicies = policies.every(policy => !policy.Arn.includes('AdministratorAccess'));
+  const permissivePolicies = policies.filter(p => p.Arn.includes('AdministratorAccess'));
   addCheck(
     'Least Privilege Policies',
-    noOverlyPermissivePolicies,
-    noOverlyPermissivePolicies
+    permissivePolicies.length === 0,
+    permissivePolicies.length === 0
       ? 'No overly permissive policies detected.'
-      : 'Some policies (e.g., AdministratorAccess) are overly permissive.'
+      : `Some policies (${permissivePolicies.map(p => p.PolicyName).join(', ')}) are overly permissive.`,
+    permissivePolicies.map(p => p.Arn)
   );
 
-  // 9. Check if there are no unused IAM users (no login for 90 days)
-  const noUnusedUsers = users.every(user => {
-    const lastUsed = user.PasswordLastUsed ? new Date(user.PasswordLastUsed) : new Date(user.CreateDate);
-    return (now - lastUsed) / (1000 * 60 * 60 * 24) <= 90;
+  const unusedUsers = users.filter(u => {
+    const lastUsed = u.PasswordLastUsed ? new Date(u.PasswordLastUsed) : new Date(u.CreateDate);
+    return (now - lastUsed) / (1000 * 60 * 60 * 24) > 90;
   });
   addCheck(
     'No Unused Users',
-    noUnusedUsers,
-    noUnusedUsers
+    unusedUsers.length === 0,
+    unusedUsers.length === 0
       ? 'No IAM users unused for over 90 days.'
-      : 'Some IAM users have not logged in for over 90 days.'
+      : `Some users (${unusedUsers.map(u => u.UserName).join(', ')}) are unused.`,
+    unusedUsers.map(u => u.UserName)
   );
 
-  // 10. Check if IAM password policy exists and meets complexity requirements
   const passwordPolicyResponse = await iam.getAccountPasswordPolicy().promise().catch(() => null);
   const strongPasswordPolicy = passwordPolicyResponse?.PasswordPolicy && 
     passwordPolicyResponse.PasswordPolicy.MinimumPasswordLength >= 8 &&
@@ -165,71 +150,68 @@ async function runIamChecks(credentials) {
   addCheck(
     'Strong Password Policy',
     !!strongPasswordPolicy,
-    strongPasswordPolicy
-      ? 'IAM password policy meets complexity requirements.'
-      : 'No strong password policy defined or it lacks complexity.'
+    strongPasswordPolicy ? 'IAM password policy meets complexity requirements.' : 'No strong password policy defined.'
   );
 
-  // 11. Check if there are no users with multiple active access keys
-  const noMultipleKeys = accessKeys.every(keys => 
-    keys.AccessKeyMetadata.filter(key => key.Status === 'Active').length <= 1
+  const usersMultipleKeys = users.filter((u, i) => 
+    accessKeys[i].AccessKeyMetadata.filter(k => k.Status === 'Active').length > 1
   );
   addCheck(
     'No Multiple Active Keys',
-    noMultipleKeys,
-    noMultipleKeys
+    usersMultipleKeys.length === 0,
+    usersMultipleKeys.length === 0
       ? 'No users have multiple active access keys.'
-      : 'Some users have multiple active access keys.'
+      : `Some users (${usersMultipleKeys.map(u => u.UserName).join(', ')}) have multiple active keys.`,
+    usersMultipleKeys.map(u => u.UserName)
   );
 
-  // 12. Check if IAM roles are used (at least one role exists)
   const rolesResponse = await iam.listRoles().promise();
   const rolesExist = rolesResponse.Roles.length > 0;
   addCheck(
     'IAM Roles Exist',
     rolesExist,
-    rolesExist
-      ? 'IAM roles are defined.'
-      : 'No IAM roles exist (use roles for temporary credentials).'
+    rolesExist ? 'IAM roles are defined.' : 'No IAM roles exist.'
   );
 
-  // 13. Check if there are no policies with wildcard resources ('*')
-  const policyDetails = await Promise.all(policies.map(policy => 
-    iam.getPolicyVersion({ PolicyArn: policy.Arn, VersionId: policy.DefaultVersionId }).promise()
-  ));
-  const noWildcardResources = policyDetails.every(detail => 
-    !JSON.stringify(detail.PolicyVersion.Document).includes('"Resource": "*"')
+  const policyDetails = await Promise.all(
+    policies.map(p => iam.getPolicyVersion({ PolicyArn: p.Arn, VersionId: p.DefaultVersionId }).promise())
+  );
+  const wildcardPolicies = policies.filter((p, i) => 
+    JSON.stringify(policyDetails[i].PolicyVersion.Document).includes('"Resource": "*"')
   );
   addCheck(
     'No Wildcard Resources',
-    noWildcardResources,
-    noWildcardResources
+    wildcardPolicies.length === 0,
+    wildcardPolicies.length === 0
       ? 'No policies use wildcard resources.'
-      : 'Some policies use wildcard resources (*).'
+      : `Some policies (${wildcardPolicies.map(p => p.PolicyName).join(', ')}) use wildcard resources.`,
+    wildcardPolicies.map(p => p.Arn)
   );
 
-  // 14. Check if IAM users have console access limited (no recent console logins if only programmatic)
-  const noRecentConsole = users.every(user => !user.PasswordLastUsed || (now - new Date(user.PasswordLastUsed)) > 90 * 24 * 60 * 60 * 1000);
+  const recentConsoleUsers = users.filter(u => 
+    u.PasswordLastUsed && (now - new Date(u.PasswordLastUsed)) <= 90 * 24 * 60 * 60 * 1000
+  );
   addCheck(
     'Limited Console Access',
-    noRecentConsole,
-    noRecentConsole
+    recentConsoleUsers.length === 0,
+    recentConsoleUsers.length === 0
       ? 'No recent console logins for programmatic users.'
-      : 'Some users with programmatic access have recent console logins.'
+      : `Some users (${recentConsoleUsers.map(u => u.UserName).join(', ')}) have recent console logins.`,
+    recentConsoleUsers.map(u => u.UserName)
   );
 
-  // 15. Check if account has an alternate contact for security
-  const accountContacts = await iam.getAccountSummary().promise();
-  const hasSecurityContact = accountSummary['AccountSecurityContact'] === 1; // Simplified check
+  const hasSecurityContact = accountSummary['AccountSecurityContact'] === 1;
   addCheck(
     'Security Contact Defined',
     hasSecurityContact,
-    hasSecurityContact
-      ? 'Account has a security contact defined.'
-      : 'No security contact defined for the account.'
+    hasSecurityContact ? 'Account has a security contact defined.' : 'No security contact defined.'
   );
 
-  return checks;
+  return {
+    ...checks,
+    totalAssets: users.length + policies.length + groups.length + rolesResponse.Roles.length + 1, // +1 for root
+    assetsAtRisk: assetsAtRiskSet.size,
+  };
 }
 
 module.exports = { runIamChecks };

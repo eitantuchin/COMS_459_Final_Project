@@ -1,43 +1,36 @@
 const AWS = require('aws-sdk');
 
-// Function to run all S3 security checks
 async function runS3Checks(credentials) {
-  const s3 = new AWS.S3({ ...credentials, region: 'us-east-1' }); // S3 requires a region for some calls
-
-  // Fetch all S3 buckets
+  const s3 = new AWS.S3({ ...credentials, region: 'us-east-1' });
   const bucketsResponse = await s3.listBuckets().promise();
   const buckets = bucketsResponse.Buckets;
 
-  // Security Checks
   const checks = {
     totalChecks: 0,
     totalPassed: 0,
     details: [],
   };
 
-  // Helper function to add check result
-  const addCheck = (name, passed, message) => {
+  const assetsAtRiskSet = new Set();
+
+  const addCheck = (name, passed, message, assetIds = []) => {
     checks.totalChecks++;
     if (passed) checks.totalPassed++;
     checks.details.push({ name, passed, message });
+    if (!passed) assetIds.forEach(id => assetsAtRiskSet.add(id));
   };
 
-  // 1. Check if there are any S3 buckets
   const bucketsExist = buckets.length > 0;
   addCheck(
     'S3 Buckets Exist',
     bucketsExist,
-    bucketsExist
-      ? 'S3 buckets are present.'
-      : 'No S3 buckets found (no checks applicable if none exist).'
+    bucketsExist ? 'S3 buckets are present.' : 'No S3 buckets found.'
   );
 
-  // If no buckets exist, skip remaining checks
   if (!bucketsExist) {
-    return checks;
+    return { ...checks, totalAssets: buckets.length, assetsAtRisk: assetsAtRiskSet.size };
   }
 
-  // Fetch additional bucket details concurrently
   const bucketDetails = await Promise.all(
     buckets.map(async bucket => {
       const [policy, acl, encryption, versioning, publicAccess, logging] = await Promise.all([
@@ -60,204 +53,201 @@ async function runS3Checks(credentials) {
     })
   );
 
-  // 2. Check if all buckets have server-side encryption enabled
-  const allEncrypted = bucketDetails.every(detail => detail.encryption);
+  const bucketsNoEncryption = bucketDetails.filter(d => !d.encryption);
   addCheck(
     'Server-Side Encryption',
-    allEncrypted,
-    allEncrypted
+    bucketsNoEncryption.length === 0,
+    bucketsNoEncryption.length === 0
       ? 'All buckets have server-side encryption enabled.'
-      : `Some buckets (${bucketDetails.filter(d => !d.encryption).map(d => d.name).join(', ')}) lack encryption.`
+      : `Some buckets (${bucketsNoEncryption.map(d => d.name).join(', ')}) lack encryption.`,
+    bucketsNoEncryption.map(d => d.name)
   );
 
-  // 3. Check if all buckets have versioning enabled
-  const allVersioned = bucketDetails.every(detail => detail.versioning === 'Enabled');
+  const bucketsNoVersioning = bucketDetails.filter(d => d.versioning !== 'Enabled');
   addCheck(
     'Versioning Enabled',
-    allVersioned,
-    allVersioned
+    bucketsNoVersioning.length === 0,
+    bucketsNoVersioning.length === 0
       ? 'All buckets have versioning enabled.'
-      : `Some buckets (${bucketDetails.filter(d => d.versioning !== 'Enabled').map(d => d.name).join(', ')}) lack versioning.`
+      : `Some buckets (${bucketsNoVersioning.map(d => d.name).join(', ')}) lack versioning.`,
+    bucketsNoVersioning.map(d => d.name)
   );
 
-  // 4. Check if all buckets block public access
-  const allBlockPublic = bucketDetails.every(detail => 
-    detail.publicAccess && 
-    detail.publicAccess.BlockPublicAcls &&
-    detail.publicAccess.IgnorePublicAcls &&
-    detail.publicAccess.BlockPublicPolicy &&
-    detail.publicAccess.RestrictPublicBuckets
+  const bucketsNoPublicBlock = bucketDetails.filter(d => 
+    !d.publicAccess || 
+    !(d.publicAccess.BlockPublicAcls && d.publicAccess.IgnorePublicAcls && 
+      d.publicAccess.BlockPublicPolicy && d.publicAccess.RestrictPublicBuckets)
   );
   addCheck(
     'Block Public Access',
-    allBlockPublic,
-    allBlockPublic
+    bucketsNoPublicBlock.length === 0,
+    bucketsNoPublicBlock.length === 0
       ? 'All buckets block public access.'
-      : `Some buckets (${bucketDetails.filter(d => !d.publicAccess || !d.publicAccess.BlockPublicAcls).map(d => d.name).join(', ')}) do not fully block public access.`
+      : `Some buckets (${bucketsNoPublicBlock.map(d => d.name).join(', ')}) do not fully block public access.`,
+    bucketsNoPublicBlock.map(d => d.name)
   );
 
-  // 5. Check if no buckets have public ACLs granting access
-  const noPublicAcls = bucketDetails.every(detail => 
-    !detail.acl.some(grant => 
-      (grant.Grantee.URI === 'http://acs.amazonaws.com/groups/global/AllUsers' || 
-       grant.Grantee.URI === 'http://acs.amazonaws.com/groups/global/AuthenticatedUsers') && 
-      grant.Permission !== 'READ'
+  const bucketsPublicAcls = bucketDetails.filter(d => 
+    d.acl.some(g => 
+      (g.Grantee.URI === 'http://acs.amazonaws.com/groups/global/AllUsers' || 
+       g.Grantee.URI === 'http://acs.amazonaws.com/groups/global/AuthenticatedUsers') && 
+      g.Permission !== 'READ'
     )
   );
   addCheck(
     'No Public ACLs',
-    noPublicAcls,
-    noPublicAcls
+    bucketsPublicAcls.length === 0,
+    bucketsPublicAcls.length === 0
       ? 'No buckets have public ACLs granting access.'
-      : 'Some buckets have public ACLs granting access.'
+      : `Some buckets (${bucketsPublicAcls.map(d => d.name).join(', ')}) have public ACLs.`,
+    bucketsPublicAcls.map(d => d.name)
   );
 
-  // 6. Check if all buckets have a bucket policy (for control)
-  const allHavePolicy = bucketDetails.every(detail => detail.policy);
+  const bucketsNoPolicy = bucketDetails.filter(d => !d.policy);
   addCheck(
     'Bucket Policy Exists',
-    allHavePolicy,
-    allHavePolicy
+    bucketsNoPolicy.length === 0,
+    bucketsNoPolicy.length === 0
       ? 'All buckets have a bucket policy.'
-      : `Some buckets (${bucketDetails.filter(d => !d.policy).map(d => d.name).join(', ')}) lack a bucket policy.`
+      : `Some buckets (${bucketsNoPolicy.map(d => d.name).join(', ')}) lack a bucket policy.`,
+    bucketsNoPolicy.map(d => d.name)
   );
 
-  // 7. Check if bucket policies deny unencrypted PUT operations
-  const allDenyUnencrypted = bucketDetails.every(detail => 
-    detail.policy && 
-    JSON.parse(detail.policy).Statement.some(statement => 
-      statement.Effect === 'Deny' && 
-      statement.Condition?.Bool?.['aws:SecureTransport'] === 'false'
+  const bucketsAllowUnencrypted = bucketDetails.filter(d => 
+    !d.policy || 
+    !JSON.parse(d.policy).Statement.some(s => 
+      s.Effect === 'Deny' && s.Condition?.Bool?.['aws:SecureTransport'] === 'false'
     )
   );
   addCheck(
     'Deny Unencrypted PUT',
-    allDenyUnencrypted,
-    allDenyUnencrypted
+    bucketsAllowUnencrypted.length === 0,
+    bucketsAllowUnencrypted.length === 0
       ? 'All bucket policies deny unencrypted PUT operations.'
-      : 'Some buckets allow unencrypted PUT operations.'
+      : `Some buckets (${bucketsAllowUnencrypted.map(d => d.name).join(', ')}) allow unencrypted PUTs.`,
+    bucketsAllowUnencrypted.map(d => d.name)
   );
 
-  // 8. Check if all buckets have logging enabled
-  const allLoggingEnabled = bucketDetails.every(detail => detail.logging?.LoggingEnabled);
+  const bucketsNoLogging = bucketDetails.filter(d => !d.logging?.LoggingEnabled);
   addCheck(
     'Logging Enabled',
-    allLoggingEnabled,
-    allLoggingEnabled
+    bucketsNoLogging.length === 0,
+    bucketsNoLogging.length === 0
       ? 'All buckets have logging enabled.'
-      : `Some buckets (${bucketDetails.filter(d => !d.logging?.LoggingEnabled).map(d => d.name).join(', ')}) lack logging.`
+      : `Some buckets (${bucketsNoLogging.map(d => d.name).join(', ')}) lack logging.`,
+    bucketsNoLogging.map(d => d.name)
   );
 
-  // 9. Check if buckets have lifecycle rules (for cost/security)
   const lifecycleRules = await Promise.all(buckets.map(bucket => 
     s3.getBucketLifecycleConfiguration({ Bucket: bucket.Name }).promise().catch(() => null)
   ));
-  const allHaveLifecycle = lifecycleRules.every(rule => rule?.Rules?.length > 0);
+  const bucketsNoLifecycle = buckets.filter((_, i) => !lifecycleRules[i]?.Rules?.length);
   addCheck(
     'Lifecycle Rules',
-    allHaveLifecycle,
-    allHaveLifecycle
+    bucketsNoLifecycle.length === 0,
+    bucketsNoLifecycle.length === 0
       ? 'All buckets have lifecycle rules.'
-      : 'Some buckets lack lifecycle rules.'
+      : `Some buckets (${bucketsNoLifecycle.map(b => b.Name).join(', ')}) lack lifecycle rules.`,
+    bucketsNoLifecycle.map(b => b.Name)
   );
 
-  // 10. Check if buckets have tags (for management)
   const tags = await Promise.all(buckets.map(bucket => 
     s3.getBucketTagging({ Bucket: bucket.Name }).promise().catch(() => ({ TagSet: [] }))
   ));
-  const allTagged = tags.every(tag => tag.TagSet.length > 0);
+  const bucketsNoTags = buckets.filter((_, i) => !tags[i].TagSet.length);
   addCheck(
     'Bucket Tagging',
-    allTagged,
-    allTagged
+    bucketsNoTags.length === 0,
+    bucketsNoTags.length === 0
       ? 'All buckets are tagged.'
-      : 'Some buckets lack tags.'
+      : `Some buckets (${bucketsNoTags.map(b => b.Name).join(', ')}) lack tags.`,
+    bucketsNoTags.map(b => b.Name)
   );
 
-  // 11. Check if buckets enforce SSL (SecureTransport)
-  const allEnforceSsl = bucketDetails.every(detail => 
-    detail.policy && 
-    JSON.parse(detail.policy).Statement.some(statement => 
-      statement.Effect === 'Deny' && 
-      statement.Condition?.Bool?.['aws:SecureTransport'] === 'false'
+  const bucketsNoSsl = bucketDetails.filter(d => 
+    !d.policy || 
+    !JSON.parse(d.policy).Statement.some(s => 
+      s.Effect === 'Deny' && s.Condition?.Bool?.['aws:SecureTransport'] === 'false'
     )
   );
   addCheck(
     'Enforce SSL',
-    allEnforceSsl,
-    allEnforceSsl
+    bucketsNoSsl.length === 0,
+    bucketsNoSsl.length === 0
       ? 'All buckets enforce SSL via policy.'
-      : 'Some buckets do not enforce SSL.'
+      : `Some buckets (${bucketsNoSsl.map(d => d.name).join(', ')}) do not enforce SSL.`,
+    bucketsNoSsl.map(d => d.name)
   );
 
-  // 12. Check if buckets have no overly permissive policies (e.g., '*')
-  const noOverlyPermissive = bucketDetails.every(detail => 
-    !detail.policy || 
-    !JSON.parse(detail.policy).Statement.some(statement => 
-      statement.Effect === 'Allow' && 
-      statement.Principal === '*' && 
-      !statement.Condition
+  const bucketsPermissive = bucketDetails.filter(d => 
+    d.policy && 
+    JSON.parse(d.policy).Statement.some(s => 
+      s.Effect === 'Allow' && s.Principal === '*' && !s.Condition
     )
   );
   addCheck(
     'No Overly Permissive Policies',
-    noOverlyPermissive,
-    noOverlyPermissive
+    bucketsPermissive.length === 0,
+    bucketsPermissive.length === 0
       ? 'No buckets have overly permissive policies.'
-      : 'Some buckets have overly permissive policies.'
+      : `Some buckets (${bucketsPermissive.map(d => d.name).join(', ')}) have overly permissive policies.`,
+    bucketsPermissive.map(d => d.name)
   );
 
-  // 13. Check if buckets have object lock enabled (for compliance)
   const objectLocks = await Promise.all(buckets.map(bucket => 
     s3.getObjectLockConfiguration({ Bucket: bucket.Name }).promise().catch(() => null)
   ));
-  const allObjectLocked = objectLocks.every(lock => lock?.ObjectLockConfiguration?.ObjectLockEnabled === 'Enabled');
+  const bucketsNoObjectLock = buckets.filter((_, i) => 
+    !objectLocks[i]?.ObjectLockConfiguration?.ObjectLockEnabled === 'Enabled'
+  );
   addCheck(
     'Object Lock Enabled',
-    allObjectLocked,
-    allObjectLocked
+    bucketsNoObjectLock.length === 0,
+    bucketsNoObjectLock.length === 0
       ? 'All buckets have object lock enabled.'
-      : 'Some buckets lack object lock (optional for compliance).'
+      : `Some buckets (${bucketsNoObjectLock.map(b => b.Name).join(', ')}) lack object lock.`,
+    bucketsNoObjectLock.map(b => b.Name)
   );
 
-  // 14. Check if buckets have default encryption with KMS (not AES-256)
-  const allKmsEncrypted = bucketDetails.every(detail => 
-    detail.encryption?.Rules.some(rule => 
-      rule.ApplyServerSideEncryptionByDefault?.SSEAlgorithm === 'aws:kms'
-    )
+  const bucketsNoKms = bucketDetails.filter(d => 
+    !d.encryption?.Rules.some(r => r.ApplyServerSideEncryptionByDefault?.SSEAlgorithm === 'aws:kms')
   );
   addCheck(
-    'K ThreadPoolMS Encryption',
-    allKmsEncrypted,
-    allKmsEncrypted
+    'KMS Encryption',
+    bucketsNoKms.length === 0,
+    bucketsNoKms.length === 0
       ? 'All buckets use KMS for default encryption.'
-      : 'Some buckets use AES-256 or no default encryption instead of KMS.'
+      : `Some buckets (${bucketsNoKms.map(d => d.name).join(', ')}) use AES-256 or no default encryption instead of KMS.`,
+    bucketsNoKms.map(d => d.name)
   );
 
-  // 15. Check if buckets have no objects with public read access
   const publicObjects = await Promise.all(buckets.map(async bucket => {
     const objects = await s3.listObjectsV2({ Bucket: bucket.Name, MaxKeys: 10 }).promise();
-    if (objects.Contents.length === 0) return true;
+    if (!objects.Contents.length) return true;
     const acls = await Promise.all(objects.Contents.map(obj => 
       s3.getObjectAcl({ Bucket: bucket.Name, Key: obj.Key }).promise()
     ));
     return !acls.some(acl => 
-      acl.Grants.some(grant => 
-        grant.Grantee.URI === 'http://acs.amazonaws.com/groups/global/AllUsers' && 
-        grant.Permission === 'READ'
+      acl.Grants.some(g => 
+        g.Grantee.URI === 'http://acs.amazonaws.com/groups/global/AllUsers' && g.Permission === 'READ'
       )
     );
   }));
-  const noPublicObjects = publicObjects.every(result => result);
+  const bucketsPublicObjects = buckets.filter((_, i) => !publicObjects[i]);
   addCheck(
     'No Public Objects',
-    noPublicObjects,
-    noPublicObjects
+    bucketsPublicObjects.length === 0,
+    bucketsPublicObjects.length === 0
       ? 'No buckets have publicly readable objects (sampled).'
-      : 'Some buckets have publicly readable objects (sampled).'
+      : `Some buckets (${bucketsPublicObjects.map(b => b.Name).join(', ')}) have publicly readable objects (sampled).`,
+    bucketsPublicObjects.map(b => b.Name)
   );
 
-  return checks;
+  return {
+    ...checks,
+    totalAssets: buckets.length,
+    assetsAtRisk: assetsAtRiskSet.size,
+  };
 }
 
 module.exports = { runS3Checks };

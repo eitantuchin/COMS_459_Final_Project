@@ -2,21 +2,16 @@ const AWS = require('aws-sdk');
 
 // Function to run all EC2 security checks across all regions
 async function runEc2Checks(credentials) {
-  // Set a default region for the initial client
-  const ec2 = new AWS.EC2({ ...credentials, region: 'us-east-1' }); // Default region for describeRegions
-
-  // Get all regions
+  const ec2 = new AWS.EC2({ ...credentials, region: 'us-east-1' });
   const regionResponse = await ec2.describeRegions().promise();
   const regions = regionResponse.Regions.map(region => region.RegionName);
 
-  // Fetch all instances across regions concurrently
   const instancePromises = regions.map(region => {
-    const regionalEc2 = new AWS.EC2({ ...credentials, region }); // Set region dynamically
+    const regionalEc2 = new AWS.EC2({ ...credentials, region });
     return regionalEc2.describeInstances().promise();
   });
   const ec2Responses = await Promise.all(instancePromises);
 
-  // Aggregate all instances
   const allInstances = [];
   ec2Responses.forEach((ec2Response, index) => {
     const region = regions[index];
@@ -27,180 +22,203 @@ async function runEc2Checks(credentials) {
     });
   });
 
-  // Security Checks
   const checks = {
     totalChecks: 0,
     totalPassed: 0,
     details: [],
   };
 
-  // Helper function to add check result
-  const addCheck = (name, passed, message) => {
+  const assetsAtRiskSet = new Set(); // Track unique instance IDs at risk
+
+  const addCheck = (name, passed, message, instanceIds = []) => {
     checks.totalChecks++;
     if (passed) checks.totalPassed++;
     checks.details.push({ name, passed, message });
+    if (!passed) {
+      instanceIds.forEach(id => assetsAtRiskSet.add(id));
+    }
   };
 
-  // 1. Check if all instances have a key pair
-  const allHaveKeyPairs = allInstances.every(instance => instance.KeyName);
+  // Security Checks with assets at risk tracking
+  // 1. Key Pair Check
+  const instancesWithoutKeyPairs = allInstances.filter(i => !i.KeyName);
   addCheck(
     'EC2 Key Pair Check',
-    allHaveKeyPairs,
-    allHaveKeyPairs
+    instancesWithoutKeyPairs.length === 0,
+    instancesWithoutKeyPairs.length === 0
       ? 'All instances have key pairs.'
-      : `Some instances (${allInstances.filter(i => !i.KeyName).map(i => `${i.InstanceId} (${i.Region})`).join(', ')}) lack key pairs.`
+      : `Some instances (${instancesWithoutKeyPairs.map(i => `${i.InstanceId} (${i.Region})`).join(', ')}) lack key pairs.`,
+    instancesWithoutKeyPairs.map(i => i.InstanceId)
   );
 
-  // 2. Check if instances are using IMDSv2
-  const allUseImdsV2 = allInstances.every(instance => instance.MetadataOptions?.HttpTokens === 'required');
+  // 2. IMDSv2 Check
+  const instancesWithoutImdsV2 = allInstances.filter(i => i.MetadataOptions?.HttpTokens !== 'required');
   addCheck(
     'IMDSv2 Enabled',
-    allUseImdsV2,
-    allUseImdsV2
+    instancesWithoutImdsV2.length === 0,
+    instancesWithoutImdsV2.length === 0
       ? 'All instances use IMDSv2.'
-      : 'Some instances do not enforce IMDSv2.'
+      : `Some instances (${instancesWithoutImdsV2.map(i => i.InstanceId).join(', ')}) do not enforce IMDSv2.`,
+    instancesWithoutImdsV2.map(i => i.InstanceId)
   );
 
-  // 3. Check if instances are in a VPC
-  const allInVpc = allInstances.every(instance => instance.VpcId);
+  // 3. VPC Check
+  const instancesNotInVpc = allInstances.filter(i => !i.VpcId);
   addCheck(
     'Instances in VPC',
-    allInVpc,
-    allInVpc
+    instancesNotInVpc.length === 0,
+    instancesNotInVpc.length === 0
       ? 'All instances are in a VPC.'
-      : 'Some instances are not in a VPC (EC2-Classic is deprecated).'
+      : `Some instances (${instancesNotInVpc.map(i => i.InstanceId).join(', ')}) are not in a VPC.`,
+    instancesNotInVpc.map(i => i.InstanceId)
   );
 
-  // 4. Check if instances have public IPs
-  const noPublicIps = allInstances.every(instance => !instance.PublicIpAddress);
+  // 4. Public IP Check
+  const instancesWithPublicIps = allInstances.filter(i => i.PublicIpAddress);
   addCheck(
     'No Public IPs',
-    noPublicIps,
-    noPublicIps
+    instancesWithPublicIps.length === 0,
+    instancesWithPublicIps.length === 0
       ? 'No instances have public IPs.'
-      : 'Some instances have public IPs, consider using private subnets.'
+      : `Some instances (${instancesWithPublicIps.map(i => i.InstanceId).join(', ')}) have public IPs.`,
+    instancesWithPublicIps.map(i => i.InstanceId)
   );
 
-  // 5. Check if instances have security groups attached
-  const allHaveSecurityGroups = allInstances.every(instance => instance.SecurityGroups?.length > 0);
+  // 5. Security Groups Check
+  const instancesWithoutSg = allInstances.filter(i => !i.SecurityGroups?.length);
   addCheck(
     'Security Groups Attached',
-    allHaveSecurityGroups,
-    allHaveSecurityGroups
+    instancesWithoutSg.length === 0,
+    instancesWithoutSg.length === 0
       ? 'All instances have security groups.'
-      : 'Some instances lack security groups.'
+      : `Some instances (${instancesWithoutSg.map(i => i.InstanceId).join(', ')}) lack security groups.`,
+    instancesWithoutSg.map(i => i.InstanceId)
   );
 
-  // 6. Check if instances are using encrypted EBS volumes
-  const allEbsEncrypted = allInstances.every(instance =>
-    instance.BlockDeviceMappings.every(bdm => bdm.Ebs?.Encrypted)
+  // 6. EBS Encryption Check
+  const instancesWithoutEncryptedEbs = allInstances.filter(i =>
+    i.BlockDeviceMappings.some(bdm => !bdm.Ebs?.Encrypted)
   );
   addCheck(
     'EBS Encryption',
-    allEbsEncrypted,
-    allEbsEncrypted
+    instancesWithoutEncryptedEbs.length === 0,
+    instancesWithoutEncryptedEbs.length === 0
       ? 'All EBS volumes are encrypted.'
-      : 'Some EBS volumes are not encrypted.'
+      : `Some instances (${instancesWithoutEncryptedEbs.map(i => i.InstanceId).join(', ')}) have unencrypted EBS volumes.`,
+    instancesWithoutEncryptedEbs.map(i => i.InstanceId)
   );
 
-  // 7. Check if instances are running
-  const allRunning = allInstances.every(instance => instance.State.Name === 'running');
+  // 7. Running State Check
+  const instancesNotRunning = allInstances.filter(i => i.State.Name !== 'running');
   addCheck(
     'Instances Running',
-    allRunning,
-    allRunning
+    instancesNotRunning.length === 0,
+    instancesNotRunning.length === 0
       ? 'All instances are running.'
-      : 'Some instances are stopped or terminated.'
+      : `Some instances (${instancesNotRunning.map(i => i.InstanceId).join(', ')}) are stopped or terminated.`,
+    instancesNotRunning.map(i => i.InstanceId)
   );
 
-  // 8. Check if instances have IAM instance profiles
-  const allHaveIamProfiles = allInstances.every(instance => instance.IamInstanceProfile);
+  // 8. IAM Profile Check
+  const instancesWithoutIam = allInstances.filter(i => !i.IamInstanceProfile);
   addCheck(
     'IAM Instance Profile',
-    allHaveIamProfiles,
-    allHaveIamProfiles
+    instancesWithoutIam.length === 0,
+    instancesWithoutIam.length === 0
       ? 'All instances have IAM profiles.'
-      : 'Some instances lack IAM profiles for least privilege access.'
+      : `Some instances (${instancesWithoutIam.map(i => i.InstanceId).join(', ')}) lack IAM profiles.`,
+    instancesWithoutIam.map(i => i.InstanceId)
   );
 
-  // 9. Check if instances have detailed monitoring enabled
-  const allDetailedMonitoring = allInstances.every(instance => instance.Monitoring?.State === 'enabled');
+  // 9. Detailed Monitoring Check
+  const instancesWithoutMonitoring = allInstances.filter(i => i.Monitoring?.State !== 'enabled');
   addCheck(
     'Detailed Monitoring',
-    allDetailedMonitoring,
-    allDetailedMonitoring
+    instancesWithoutMonitoring.length === 0,
+    instancesWithoutMonitoring.length === 0
       ? 'All instances have detailed monitoring enabled.'
-      : 'Some instances lack detailed monitoring.'
+      : `Some instances (${instancesWithoutMonitoring.map(i => i.InstanceId).join(', ')}) lack detailed monitoring.`,
+    instancesWithoutMonitoring.map(i => i.InstanceId)
   );
 
-  // 10. Check if instances are using a recent AMI (simplified example)
+  // 10. AMI Check
   const latestAmiPrefix = 'ami-0';
-  const allLatestAmi = allInstances.every(instance => instance.ImageId?.startsWith(latestAmiPrefix));
+  const instancesWithOldAmi = allInstances.filter(i => !i.ImageId?.startsWith(latestAmiPrefix));
   addCheck(
     'Latest AMI',
-    allLatestAmi,
-    allLatestAmi
+    instancesWithOldAmi.length === 0,
+    instancesWithOldAmi.length === 0
       ? 'All instances use a recent AMI.'
-      : 'Some instances may be using outdated AMIs.'
+      : `Some instances (${instancesWithOldAmi.map(i => i.InstanceId).join(', ')}) may be using outdated AMIs.`,
+    instancesWithOldAmi.map(i => i.InstanceId)
   );
 
-  // 11. Check if instances have tags
-  const allTagged = allInstances.every(instance => instance.Tags?.length > 0);
+  // 11. Tags Check
+  const instancesWithoutTags = allInstances.filter(i => !i.Tags?.length);
   addCheck(
     'Instance Tagging',
-    allTagged,
-    allTagged
+    instancesWithoutTags.length === 0,
+    instancesWithoutTags.length === 0
       ? 'All instances are tagged.'
-      : 'Some instances lack tags.'
+      : `Some instances (${instancesWithoutTags.map(i => i.InstanceId).join(', ')}) lack tags.`,
+    instancesWithoutTags.map(i => i.InstanceId)
   );
 
-  // 12. Check if instances are in an Auto Scaling group
-  const allInAsg = allInstances.every(instance => instance.AutoScalingGroupName);
+  // 12. Auto Scaling Check
+  const instancesNotInAsg = allInstances.filter(i => !i.AutoScalingGroupName);
   addCheck(
     'Auto Scaling Group',
-    allInAsg,
-    allInAsg
+    instancesNotInAsg.length === 0,
+    instancesNotInAsg.length === 0
       ? 'All instances are in an Auto Scaling group.'
-      : 'Some instances are not in an Auto Scaling group.'
+      : `Some instances (${instancesNotInAsg.map(i => i.InstanceId).join(', ')}) are not in an Auto Scaling group.`,
+    instancesNotInAsg.map(i => i.InstanceId)
   );
 
-  // 13. Check if instances have termination protection
-  const allTerminationProtected = allInstances.every(instance => instance.DisableApiTermination);
+  // 13. Termination Protection Check
+  const instancesWithoutProtection = allInstances.filter(i => !i.DisableApiTermination);
   addCheck(
     'Termination Protection',
-    allTerminationProtected,
-    allTerminationProtected
+    instancesWithoutProtection.length === 0,
+    instancesWithoutProtection.length === 0
       ? 'All instances have termination protection.'
-      : 'Some instances lack termination protection.'
+      : `Some instances (${instancesWithoutProtection.map(i => i.InstanceId).join(', ')}) lack termination protection.`,
+    instancesWithoutProtection.map(i => i.InstanceId)
   );
 
-  // 14. Check if instances use Nitro-based types
+  // 14. Nitro Types Check
   const nitroTypes = ['t3', 't4g', 'm5', 'c5', 'r5'];
-  const allNitro = allInstances.every(instance =>
-    nitroTypes.some(type => instance.InstanceType?.startsWith(type))
+  const instancesNotNitro = allInstances.filter(i =>
+    !nitroTypes.some(type => i.InstanceType?.startsWith(type))
   );
   addCheck(
     'Nitro Instance Types',
-    allNitro,
-    allNitro
+    instancesNotNitro.length === 0,
+    instancesNotNitro.length === 0
       ? 'All instances use Nitro-based types.'
-      : 'Some instances use older instance types.'
+      : `Some instances (${instancesNotNitro.map(i => i.InstanceId).join(', ')}) use older instance types.`,
+    instancesNotNitro.map(i => i.InstanceId)
   );
 
-  // 15. Check if instances have reasonable security group rules
-  const allReasonableSgRules = allInstances.every(instance => {
-    const sgCount = instance.SecurityGroups.reduce((acc, sg) => acc + (sg.GroupId ? 1 : 0), 0);
-    return sgCount <= 50;
+  // 15. Security Group Rules Check
+  const instancesWithExcessiveSg = allInstances.filter(i => {
+    const sgCount = i.SecurityGroups.reduce((acc, sg) => acc + (sg.GroupId ? 1 : 0), 0);
+    return sgCount > 50;
   });
   addCheck(
     'Reasonable SG Rules',
-    allReasonableSgRules,
-    allReasonableSgRules
+    instancesWithExcessiveSg.length === 0,
+    instancesWithExcessiveSg.length === 0
       ? 'All instances have a reasonable number of security group rules.'
-      : 'Some instances have excessive security group rules.'
+      : `Some instances (${instancesWithExcessiveSg.map(i => i.InstanceId).join(', ')}) have excessive security group rules.`,
+    instancesWithExcessiveSg.map(i => i.InstanceId)
   );
 
-  return checks;
+  return {
+    ...checks,
+    totalAssets: allInstances.length,
+    assetsAtRisk: assetsAtRiskSet.size,
+  };
 }
 
 module.exports = { runEc2Checks };
