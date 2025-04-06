@@ -3,7 +3,7 @@
 	  <header class="header">
 		<div class="top-nav">
 		  <div class="top-left-nav">
-			<div class="icon-image"></div>
+			<img src="../../assets/cloud-dome-logo.png" alt="CloudDome Logo" class="icon-image">
 			<button class="logo">CloudDome</button>
 		  </div>
 		  <nav class="nav-links">

@@ -1,4 +1,3 @@
-/* eslint-disable */
 export default {
     data() {
       return {
@@ -8,11 +7,12 @@ export default {
         awsSecretKey: '',
         awsSessionToken: '',
         awsIdError: '',
-        showProgress: false, // Controls visibility of progress bar
-        progressWidth: 0, // Percentage width of the progress bar
-        progressMessage: '', // Message above the progress bar
-        isScanning: false, // Tracks step 2 progress
-        isDone: false, // Tracks step 3 progress
+        showProgress: false,
+        progressWidth: 0,
+        progressMessage: '',
+        isScanning: false,
+        isDone: false,
+        securityResults: null, // Store results from security checks
       };
     },
     methods: {
@@ -44,9 +44,7 @@ export default {
         try {
           const response = await fetch('http://localhost:3000/api/check-aws-info', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               awsAccountId: this.awsAccountId,
               awsAccessKey: this.awsAccessKey,
@@ -62,19 +60,19 @@ export default {
           }
   
           if (!data.exists) {
-            this.awsIdError = 'AWS Account ID not found.';
+            this.awsIdError = 'AWS Account ID not found or credentials invalid.';
           } else {
             this.awsIdError = '';
-            this.startProgress(); // Start progress bar on successful validation
+            this.startProgress(); // Start progress bar and trigger security checks
           }
         } catch (error) {
           console.error('Error checking AWS Account ID:', error);
           this.awsIdError = 'Error checking AWS Account ID. Please try again.';
         }
       },
-      startProgress() {
+      async startProgress() {
         this.showProgress = true;
-        this.isScanning = true; // Activate step 2
+        this.isScanning = true;
         const messages = [
           'Scanning AWS services...',
           'Checking security measures...',
@@ -85,21 +83,56 @@ export default {
         let step = 0;
         this.progressWidth = 0;
   
+        // Start security checks immediately
+        this.runSecurityChecks();
+  
         const interval = setInterval(() => {
-          this.progressWidth += 20; // Increase by 20% every 2 seconds
+          this.progressWidth += 20;
           this.progressMessage = messages[step];
           step++;
   
           if (step >= messages.length) {
             clearInterval(interval);
             this.isScanning = false;
-            this.isDone = true; // Activate step 3
+            this.isDone = true;
             setTimeout(() => {
               this.showProgress = false;
-              this.$router.push('/results');
-            }, 500); // Wait 0.5 seconds after completion
+              if (this.securityResults) {
+                this.$router.push({
+                  path: '/results',
+                  query: { results: JSON.stringify(this.securityResults) },
+                });
+              } else {
+                console.error('Security checks not completed yet');
+              }
+            }, 500);
           }
-        }, 2000); // Update every 2 seconds
+        }, 2000);
+      },
+     async runSecurityChecks() {
+        try {
+          const response = await fetch('http://localhost:3000/api/run-security-checks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              awsAccountId: this.awsAccountId,
+              awsAccessKey: this.awsAccessKey,
+              awsSecretKey: this.awsSecretKey,
+              awsSessionToken: this.awsSessionToken || undefined,
+            }),
+          });
+  
+          const data = await response.json();
+  
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to run security checks');
+          }
+  
+          this.securityResults = data; // Store results
+        } catch (error) {
+          console.error('Error running security checks:', error);
+          this.awsIdError = 'Error running security checks. Please try again.';
+        }
       },
     },
   };
