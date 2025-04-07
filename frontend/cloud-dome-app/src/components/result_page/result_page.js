@@ -6,14 +6,18 @@ export default {
             currentProgress: 0,
             safeBarWidth: 0,
             atRiskBarWidth: 0,
-            serviceBarWidths: [], // Array to store animated widths for each service
+            serviceBarWidths: [],
             results: {},
             isLoaded: false,
             activePanel: 0,
+            animatedScore: 0, // New data property for animated score
+            animatedTotalAssets: 0, // New data property for animated total assets
+            animatedSafeAssets: 0, // New data property for animated safe assets
+            animatedAtRiskAssets: 0, // New data property for animated at-risk assets
             panelItems: [
-                { label: 'Overview', content: 'overview' },
-                { label: 'Charts', content: 'charts' },
-                { label: 'Score Analysis', content: 'analysis' }
+                { label: 'Overview', content: 'overview', icon: 'fas fa-home' },
+                { label: 'Charts', content: 'charts', icon: 'fas fa-chart-bar' },
+                { label: 'Score Analysis', content: 'analysis', icon: 'fas fa-search' }
             ]
         };
     },
@@ -22,7 +26,7 @@ export default {
             return Math.round(this.results.securityScore || 0);
         },
         circumference() {
-            return 2 * Math.PI * 90;
+            return 2 * Math.PI * 95;
         },
         strokeDashoffset() {
             const progress = this.currentProgress / 100;
@@ -63,16 +67,33 @@ export default {
         },
         serviceTargetPercentages() {
             const totalAtRisk = this.results.totalAssetsAtRisk || 0;
-            return this.sortedServices.map(service => 
+            return this.sortedServices.map(service =>
                 totalAtRisk > 0 ? (service.assetsAtRisk / totalAtRisk) * 100 : 0
             );
-        }
+        },
+        serviceScores() {
+            return Object.keys(this.results.services || {}).map(name => {
+                const service = this.results.services[name];
+                const score = service.totalChecks > 0 ? (service.totalPassed / service.totalChecks) * 100 : 0;
+                const circumference = 2 * Math.PI * 40; // Smaller radius for service rings
+                const progress = score / 100;
+                const strokeDashoffset = circumference * (1 - progress);
+                const ringColor = this.getRingColor(score);
+                return {
+                    name: name.toUpperCase(),
+                    score,
+                    strokeDashoffset,
+                    ringColor
+                };
+            });
+        },
+        serviceCircumference() {
+            return 2 * Math.PI * 40;
+        },
     },
     methods: {
         setActivePanel(index) {
             this.activePanel = index;
-            this.currentView = this.panelItems[index].content;
-            // Add logic here to switch content based on selection
         },
         showDropdown() {
             this.isDropdownOpen = true;
@@ -83,66 +104,52 @@ export default {
         goToMainPage() {
             this.$router.push({ path: '/' });
         },
-        animateScore() {
-            const targetScore = this.results.securityScore || 0;
-            let current = 0;
-            const increment = targetScore / 50;
-            const animate = () => {
-                if (current < targetScore) {
-                    current += increment;
-                    if (current > targetScore) current = targetScore;
-                    this.currentProgress = current;
-                    requestAnimationFrame(animate);
-                }
-            };
-            requestAnimationFrame(animate);
+        // Easing function for deceleration (ease-out)
+        easeOutQuad(t) {
+            return t * (2 - t); // Quadratic ease-out
         },
-        animateAssetsBar() {
+
+        // Add this method:
+        animateAll() {
+            const targetScore = this.results.securityScore || 0;
+            const totalAssets = this.results.totalAssets || 0;
+            const atRiskAssets = this.results.totalAssetsAtRisk || 0;
+            const safeAssets = totalAssets - atRiskAssets;
             const targetSafe = this.safePercentage;
             const targetAtRisk = this.atRiskPercentage;
-            let currentSafe = 0;
-            let currentAtRisk = 0;
-            const incrementSafe = targetSafe / 50;
-            const incrementAtRisk = targetAtRisk / 50;
+            const serviceTargets = this.serviceTargetPercentages;
 
-            const animate = () => {
-                if (currentSafe < targetSafe || currentAtRisk < targetAtRisk) {
-                    if (currentSafe < targetSafe) {
-                        currentSafe += incrementSafe;
-                        if (currentSafe > targetSafe) currentSafe = targetSafe;
-                        this.safeBarWidth = currentSafe;
-                    }
-                    if (currentAtRisk < targetAtRisk) {
-                        currentAtRisk += incrementAtRisk;
-                        if (currentAtRisk > targetAtRisk) currentAtRisk = targetAtRisk;
-                        this.atRiskBarWidth = currentAtRisk;
-                    }
-                    requestAnimationFrame(animate);
+            let startTime = null;
+            const step = (timestamp) => {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / 1500, 1);
+                const easedProgress = this.easeOutQuad(progress);
+
+                // Update all values simultaneously
+                this.animatedScore = Math.round(targetScore * easedProgress);
+                this.currentProgress = targetScore * easedProgress;
+
+                this.animatedTotalAssets = Math.round(totalAssets * easedProgress);
+                this.animatedSafeAssets = Math.round(safeAssets * easedProgress);
+                this.animatedAtRiskAssets = Math.round(atRiskAssets * easedProgress);
+
+                this.safeBarWidth = targetSafe * easedProgress;
+                this.atRiskBarWidth = targetAtRisk * easedProgress;
+
+                this.serviceBarWidths = serviceTargets.map(target => target * easedProgress);
+
+                if (progress < 1) {
+                    requestAnimationFrame(step);
                 }
             };
-            requestAnimationFrame(animate);
+            requestAnimationFrame(step);
         },
-        animateServiceBars() {
-            const targets = this.serviceTargetPercentages;
-            this.serviceBarWidths = new Array(targets.length).fill(0); // Initialize widths to 0
-            const increments = targets.map(target => target / 50); // Smoothness factor
-            const currents = new Array(targets.length).fill(0);
-
-            const animate = () => {
-                let stillAnimating = false;
-                targets.forEach((target, index) => {
-                    if (currents[index] < target) {
-                        currents[index] += increments[index];
-                        if (currents[index] > target) currents[index] = target;
-                        this.serviceBarWidths[index] = currents[index];
-                        stillAnimating = true;
-                    }
-                });
-                if (stillAnimating) {
-                    requestAnimationFrame(animate);
-                }
-            };
-            requestAnimationFrame(animate);
+        getRingColor(score) {
+            if (score <= 20) return '#d32f2f';
+            if (score <= 40) return '#f57c00';
+            if (score <= 60) return '#ffca28';
+            if (score <= 80) return '#388e3c';
+            return '#2e7d32';
         },
         async fetchResults() {
             const scanId = this.$route.query.scanId;
@@ -159,9 +166,8 @@ export default {
                 this.results = data;
                 this.$nextTick(() => {
                     this.isLoaded = true;
-                    this.animateScore();
-                    this.animateAssetsBar();
-                    this.animateServiceBars(); // Start service bars animation
+                    this.animateAll(); // Single animation that handles everything
+
                 });
             } catch (error) {
                 console.error('Error fetching scan results:', error);

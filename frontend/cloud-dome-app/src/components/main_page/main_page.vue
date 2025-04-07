@@ -29,7 +29,7 @@
 			  <button class="title-button" @click="scrollToAwsInput">Scan Your AWS Assets</button>
 			</div>
 		  </div>
-		  <div class="main-image"></div>
+		  <img src="../../assets/overview-dashboard.png" alt="Results Overview" class="main-image"/>
 		</div>
 	  </header>
 	  <main class="main-content">
