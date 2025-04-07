@@ -17,7 +17,7 @@ const { runSqsChecks } = require('./checks/sqs_checks');
 
 const app = express();
 const port = 3000;
-
+const scanResultsStore = new Map();
 app.use(express.json());
 app.use(cors());
 
@@ -239,12 +239,29 @@ app.post('/api/run-security-checks', async (req, res) => {
       totalPassed,
     };
 
-    res.json(result);
+    // Generate a unique ID for this scan result
+    const scanId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    scanResultsStore.set(scanId, result);
+
+    // Return the ID instead of the full result
+    res.json({ scanId });
   } catch (error) {
     console.error('Error running security checks:', error);
     res.status(500).json({ error: error.message || 'Failed to run security checks' });
   }
 });
+
+// New endpoint to fetch scan results by ID
+app.get('/api/get-security-results/:scanId', (req, res) => {
+    const { scanId } = req.params;
+    const result = scanResultsStore.get(scanId);
+  
+    if (!result) {
+      return res.status(404).json({ error: 'Scan results not found or expired' });
+    }
+  
+    res.json(result);
+  });
 
 app.listen(port, () => {
   console.log(`Backend server running on http://localhost:${port}`);

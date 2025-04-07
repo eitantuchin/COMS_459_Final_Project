@@ -12,7 +12,7 @@ export default {
         progressMessage: '',
         isScanning: false,
         isDone: false,
-        securityResults: null, // Store results from security checks
+        scanId: null,
       };
     },
     methods: {
@@ -21,6 +21,9 @@ export default {
       },
       hideDropdown() {
         this.isDropdownOpen = false;
+      },
+      refresh() {
+        this.$router.push({ path: '/' });
       },
       scrollToAwsInput() {
         const awsInput = document.getElementById('aws-account-input');
@@ -63,6 +66,8 @@ export default {
             this.awsIdError = 'AWS Account ID not found or credentials invalid.';
           } else {
             this.awsIdError = '';
+             // Start security checks immediately
+            this.runSecurityChecks();
             this.startProgress(); // Start progress bar and trigger security checks
           }
         } catch (error) {
@@ -73,6 +78,7 @@ export default {
       async startProgress() {
         this.showProgress = true;
         this.isScanning = true;
+        this.progressMessage = 'Authenticating...';
         const messages = [
           'Scanning AWS services...',
           'Checking security measures...',
@@ -83,9 +89,8 @@ export default {
         let step = 0;
         this.progressWidth = 0;
   
-        // Start security checks immediately
-        this.runSecurityChecks();
-  
+        await this.runSecurityChecks(); // Wait for scan ID
+        
         const interval = setInterval(() => {
           this.progressWidth += 20;
           this.progressMessage = messages[step];
@@ -97,19 +102,19 @@ export default {
             this.isDone = true;
             setTimeout(() => {
               this.showProgress = false;
-              if (this.securityResults) {
+              if (this.scanId) {
                 this.$router.push({
                   path: '/results',
-                  query: { results: JSON.stringify(this.securityResults) },
+                  query: { scanId: this.scanId },
                 });
               } else {
-                console.error('Security checks not completed yet');
+                console.error('Scan ID not received');
               }
-            }, 500);
+            }, 1000);
           }
         }, 2000);
       },
-     async runSecurityChecks() {
+      async runSecurityChecks() {
         try {
           const response = await fetch('http://localhost:3000/api/run-security-checks', {
             method: 'POST',
@@ -128,7 +133,7 @@ export default {
             throw new Error(data.error || 'Failed to run security checks');
           }
   
-          this.securityResults = data; // Store results
+          this.scanId = data.scanId; // Store the scan ID
         } catch (error) {
           console.error('Error running security checks:', error);
           this.awsIdError = 'Error running security checks. Please try again.';
@@ -136,18 +141,3 @@ export default {
       },
     },
   };
-
-document.addEventListener('DOMContentLoaded', () => {
-    const logo = document.querySelector('.logo');
-    const icon_image = document.querySelector('.icon-image');
-    if (logo) {
-        logo.addEventListener('click', () => {
-            window.location.reload(); // Reload the current page
-        });
-    }
-    if (icon_image) {
-        icon_image.addEventListener('click', () => {
-            window.location.reload(); // Reload the current page
-        });
-    }
-});

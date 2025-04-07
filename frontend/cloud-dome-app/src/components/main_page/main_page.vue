@@ -3,8 +3,8 @@
 	  <header class="header">
 		<div class="top-nav">
 		  <div class="top-left-nav">
-			<img src="../../assets/cloud-dome-logo.png" alt="CloudDome Logo" class="icon-image">
-			<button class="logo">CloudDome</button>
+			<img src="../../assets/cloud-dome-logo.png" alt="CloudDome Logo" class="icon-image" @click="refresh">
+            <button class="logo" @click="refresh">CloudDome</button>
 		  </div>
 		  <nav class="nav-links">
 			<div class="dropdown" @mouseenter="showDropdown" @mouseleave="hideDropdown">
@@ -133,7 +133,7 @@
 			</div>
 		</section>
 		<p class="privacy-message">CloudDome never stores or saves any sensitive data that you use.</p>
-		</main>
+	  </main>
 	  <footer class="footer">
 		<div class="footer-copyright">
 		  <p>© 2025 CloudDome. All rights reserved.</p>
