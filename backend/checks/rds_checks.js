@@ -41,13 +41,33 @@ async function runRdsChecks(credentials) {
     details: [],
   };
 
+  // Track assets and risks per region
+  const regionStats = {};
+  regions.forEach(region => {
+    regionStats[region] = {
+      totalAssets: 0,
+      assetsAtRisk: new Set(),
+    };
+  });
+
   const assetsAtRiskSet = new Set();
 
   const addCheck = (name, passed, message, assetIds = []) => {
     checks.totalChecks++;
     if (passed) checks.totalPassed++;
     checks.details.push({ name, passed, message });
-    if (!passed) assetIds.forEach(id => assetsAtRiskSet.add(id));
+    if (!passed) {
+      assetIds.forEach(id => {
+        assetsAtRiskSet.add(id);
+        // Find the region for this asset and add to region-specific set
+        const asset = allInstances.find(i => i.DBInstanceIdentifier === id) ||
+                      allSnapshots.find(s => s.DBSnapshotIdentifier === id) ||
+                      allSubnetGroups.find(sg => sg.DBSubnetGroupName === id);
+        if (asset && asset.Region) {
+          regionStats[asset.Region].assetsAtRisk.add(id);
+        }
+      });
+    }
   };
 
   const instancesExist = allInstances.length > 0;
@@ -58,7 +78,21 @@ async function runRdsChecks(credentials) {
   );
 
   if (!instancesExist) {
-    return { ...checks, totalAssets: allInstances.length + allSnapshots.length, assetsAtRisk: assetsAtRiskSet.size };
+    regions.forEach(region => {
+      regionStats[region].totalAssets = allInstances.filter(i => i.Region === region).length +
+                                        allSnapshots.filter(s => s.Region === region).length;
+    });
+    return { 
+      ...checks, 
+      totalAssets: allInstances.length + allSnapshots.length, 
+      assetsAtRisk: assetsAtRiskSet.size,
+      regionStats: Object.fromEntries(
+        Object.entries(regionStats).map(([region, stats]) => [region, {
+          totalAssets: stats.totalAssets,
+          assetsAtRisk: stats.assetsAtRisk.size
+        }])
+      )
+    };
   }
 
   const instancesNotEncrypted = allInstances.filter(i => !i.StorageEncrypted);
@@ -210,10 +244,22 @@ async function runRdsChecks(credentials) {
     instancesOldEngine.map(i => i.DBInstanceIdentifier)
   );
 
+  // Calculate total assets per region
+  regions.forEach(region => {
+    regionStats[region].totalAssets = allInstances.filter(i => i.Region === region).length +
+                                      allSnapshots.filter(s => s.Region === region).length;
+  });
+
   return {
     ...checks,
     totalAssets: allInstances.length + allSnapshots.length,
     assetsAtRisk: assetsAtRiskSet.size,
+    regionStats: Object.fromEntries(
+      Object.entries(regionStats).map(([region, stats]) => [region, {
+        totalAssets: stats.totalAssets,
+        assetsAtRisk: stats.assetsAtRisk.size
+      }])
+    )
   };
 }
 

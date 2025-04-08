@@ -31,13 +31,32 @@ async function runEbsChecks(credentials) {
     details: [],
   };
 
+  // Track assets and risks per region
+  const regionStats = {};
+  regions.forEach(region => {
+    regionStats[region] = {
+      totalAssets: 0,
+      assetsAtRisk: new Set(),
+    };
+  });
+
   const assetsAtRiskSet = new Set();
 
   const addCheck = (name, passed, message, assetIds = []) => {
     checks.totalChecks++;
     if (passed) checks.totalPassed++;
     checks.details.push({ name, passed, message });
-    if (!passed) assetIds.forEach(id => assetsAtRiskSet.add(id));
+    if (!passed) {
+      assetIds.forEach(id => {
+        assetsAtRiskSet.add(id);
+        // Find the region for this asset and add to region-specific set
+        const asset = allVolumes.find(v => v.VolumeId === id) || 
+                      allSnapshots.find(s => s.SnapshotId === id);
+        if (asset && asset.Region) {
+          regionStats[asset.Region].assetsAtRisk.add(id);
+        }
+      });
+    }
   };
 
   const volumesExist = allVolumes.length > 0;
@@ -48,7 +67,21 @@ async function runEbsChecks(credentials) {
   );
 
   if (!volumesExist) {
-    return { ...checks, totalAssets: allVolumes.length + allSnapshots.length, assetsAtRisk: assetsAtRiskSet.size };
+    regions.forEach(region => {
+      regionStats[region].totalAssets = allVolumes.filter(v => v.Region === region).length +
+                                        allSnapshots.filter(s => s.Region === region).length;
+    });
+    return { 
+      ...checks, 
+      totalAssets: allVolumes.length + allSnapshots.length, 
+      assetsAtRisk: assetsAtRiskSet.size,
+      regionStats: Object.fromEntries(
+        Object.entries(regionStats).map(([region, stats]) => [region, {
+          totalAssets: stats.totalAssets,
+          assetsAtRisk: stats.assetsAtRisk.size
+        }])
+      )
+    };
   }
 
   const volumesNotEncrypted = allVolumes.filter(v => !v.Encrypted);
@@ -204,10 +237,22 @@ async function runEbsChecks(credentials) {
     volumesNoKms.map(v => v.VolumeId)
   );
 
+  // Calculate total assets per region
+  regions.forEach(region => {
+    regionStats[region].totalAssets = allVolumes.filter(v => v.Region === region).length +
+                                      allSnapshots.filter(s => s.Region === region).length;
+  });
+
   return {
     ...checks,
     totalAssets: allVolumes.length + allSnapshots.length,
     assetsAtRisk: assetsAtRiskSet.size,
+    regionStats: Object.fromEntries(
+      Object.entries(regionStats).map(([region, stats]) => [region, {
+        totalAssets: stats.totalAssets,
+        assetsAtRisk: stats.assetsAtRisk.size
+      }])
+    )
   };
 }
 

@@ -2,6 +2,10 @@ const AWS = require('aws-sdk');
 
 async function runIamChecks(credentials) {
   const iam = new AWS.IAM({ ...credentials });
+  const ec2 = new AWS.EC2({ ...credentials, region: 'us-east-1' });
+  const regionResponse = await ec2.describeRegions().promise();
+  const regions = regionResponse.Regions.map(region => region.RegionName);
+
   const [usersResponse, policiesResponse, groupsResponse, accountSummaryResponse] = await Promise.all([
     iam.listUsers().promise(),
     iam.listPolicies({ Scope: 'Local' }).promise(),
@@ -20,13 +24,25 @@ async function runIamChecks(credentials) {
     details: [],
   };
 
+  const regionStats = {};
+  regions.forEach(region => {
+    regionStats[region] = { totalAssets: 0, assetsAtRisk: new Set() };
+  });
+  // Since IAM is global, assign all assets to a "global" pseudo-region (e.g., us-east-1)
+  const globalRegion = 'us-east-1';
+
   const assetsAtRiskSet = new Set();
 
   const addCheck = (name, passed, message, assetIds = []) => {
     checks.totalChecks++;
     if (passed) checks.totalPassed++;
     checks.details.push({ name, passed, message });
-    if (!passed) assetIds.forEach(id => assetsAtRiskSet.add(id));
+    if (!passed) {
+      assetIds.forEach(id => {
+        assetsAtRiskSet.add(id);
+        regionStats[globalRegion].assetsAtRisk.add(id); // All IAM assets assigned to global region
+      });
+    }
   };
 
   const rootMfaEnabled = accountSummary['AccountMFAEnabled'] === 1;
@@ -207,10 +223,19 @@ async function runIamChecks(credentials) {
     hasSecurityContact ? 'Account has a security contact defined.' : 'No security contact defined.'
   );
 
+  // Calculate total assets for the global region
+  regionStats[globalRegion].totalAssets = users.length + policies.length + groups.length + rolesResponse.Roles.length + 1; // +1 for root
+
   return {
     ...checks,
     totalAssets: users.length + policies.length + groups.length + rolesResponse.Roles.length + 1, // +1 for root
     assetsAtRisk: assetsAtRiskSet.size,
+    regionStats: Object.fromEntries(
+      Object.entries(regionStats).map(([region, stats]) => [region, {
+        totalAssets: stats.totalAssets,
+        assetsAtRisk: stats.assetsAtRisk.size
+      }])
+    )
   };
 }
 

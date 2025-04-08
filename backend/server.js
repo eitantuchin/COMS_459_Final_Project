@@ -151,93 +151,131 @@ app.post('/api/run-security-checks', async (req, res) => {
 
     const securityScore = totalChecks > 0 ? (totalPassed / totalChecks) * 100 : 0;
 
-    // Prepare response
-    const result = {
-      securityScore: securityScore.toFixed(2),
-      totalAssets,
-      totalAssetsAtRisk, // Add total assets at risk to top-level response
-      services: {
-        ec2: {
-          totalChecks: ec2Results.totalChecks,
-          totalPassed: ec2Results.totalPassed,
-          totalAssets: ec2Results.totalAssets || 0,
-          assetsAtRisk: ec2Results.assetsAtRisk || 0, // Include per-service assets at risk
-          details: ec2Results.details,
-        },
-        iam: {
-          totalChecks: iamResults.totalChecks,
-          totalPassed: iamResults.totalPassed,
-          totalAssets: iamResults.totalAssets || 0,
-          assetsAtRisk: iamResults.assetsAtRisk || 0,
-          details: iamResults.details,
-        },
-        s3: {
-          totalChecks: s3Results.totalChecks,
-          totalPassed: s3Results.totalPassed,
-          totalAssets: s3Results.totalAssets || 0,
-          assetsAtRisk: s3Results.assetsAtRisk || 0,
-          details: s3Results.details,
-        },
-        vpc: {
-          totalChecks: vpcResults.totalChecks,
-          totalPassed: vpcResults.totalPassed,
-          totalAssets: vpcResults.totalAssets || 0,
-          assetsAtRisk: vpcResults.assetsAtRisk || 0,
-          details: vpcResults.details,
-        },
-        rds: {
-          totalChecks: rdsResults.totalChecks,
-          totalPassed: rdsResults.totalPassed,
-          totalAssets: rdsResults.totalAssets || 0,
-          assetsAtRisk: rdsResults.assetsAtRisk || 0,
-          details: rdsResults.details,
-        },
-        lambda: {
-          totalChecks: lambdaResults.totalChecks,
-          totalPassed: lambdaResults.totalPassed,
-          totalAssets: lambdaResults.totalAssets || 0,
-          assetsAtRisk: lambdaResults.assetsAtRisk || 0,
-          details: lambdaResults.details,
-        },
-        cloudtrail: {
-          totalChecks: cloudTrailResults.totalChecks,
-          totalPassed: cloudTrailResults.totalPassed,
-          totalAssets: cloudTrailResults.totalAssets || 0,
-          assetsAtRisk: cloudTrailResults.assetsAtRisk || 0,
-          details: cloudTrailResults.details,
-        },
-        ebs: {
-          totalChecks: ebsResults.totalChecks,
-          totalPassed: ebsResults.totalPassed,
-          totalAssets: ebsResults.totalAssets || 0,
-          assetsAtRisk: ebsResults.assetsAtRisk || 0,
-          details: ebsResults.details,
-        },
-        elb: {
-          totalChecks: elbResults.totalChecks,
-          totalPassed: elbResults.totalPassed,
-          totalAssets: elbResults.totalAssets || 0,
-          assetsAtRisk: elbResults.assetsAtRisk || 0,
-          details: elbResults.details,
-        },
-        sns: {
-          totalChecks: snsResults.totalChecks,
-          totalPassed: snsResults.totalPassed,
-          totalAssets: snsResults.totalAssets || 0,
-          assetsAtRisk: snsResults.assetsAtRisk || 0,
-          details: snsResults.details,
-        },
-        sqs: {
-          totalChecks: sqsResults.totalChecks,
-          totalPassed: sqsResults.totalPassed,
-          totalAssets: sqsResults.totalAssets || 0,
-          assetsAtRisk: sqsResults.assetsAtRisk || 0,
-          details: sqsResults.details,
-        },
-      },
-      totalChecks,
-      totalPassed,
-    };
+   // Aggregate region stats from all services
+   const regionStats = {};
+   const addRegionStats = (serviceResults, serviceName) => {
+     if (serviceResults.regionStats) {
+       Object.entries(serviceResults.regionStats).forEach(([region, stats]) => {
+         if (!regionStats[region]) {
+           regionStats[region] = { totalAssets: 0, assetsAtRisk: 0 };
+         }
+         regionStats[region].totalAssets += stats.totalAssets;
+         regionStats[region].assetsAtRisk += stats.assetsAtRisk;
+       });
+     }
+   };
+
+   addRegionStats(ec2Results, 'ec2');
+   addRegionStats(vpcResults, 'vpc');
+   addRegionStats(rdsResults, 'rds');
+   addRegionStats(lambdaResults, 'lambda');
+   addRegionStats(ebsResults, 'ebs');
+   addRegionStats(elbResults, 'elb');
+   addRegionStats(snsResults, 'sns');
+   addRegionStats(sqsResults, 'sqs');
+   addRegionStats(iamResults, 'iam');
+   addRegionStats(s3Results, 's3');
+   addRegionStats(cloudTrailResults, 'cloudtrail');
+   // Note: IAM, S3, CloudTrail are typically global or not fully region-specific
+
+   const result = {
+     securityScore: securityScore.toFixed(2),
+     totalAssets,
+     totalAssetsAtRisk,
+     services: {
+       ec2: {
+         totalChecks: ec2Results.totalChecks,
+         totalPassed: ec2Results.totalPassed,
+         totalAssets: ec2Results.totalAssets || 0,
+         assetsAtRisk: ec2Results.assetsAtRisk || 0,
+         details: ec2Results.details,
+         regionStats: ec2Results.regionStats || {},
+       },
+       iam: {
+         totalChecks: iamResults.totalChecks,
+         totalPassed: iamResults.totalPassed,
+         totalAssets: iamResults.totalAssets || 0,
+         assetsAtRisk: iamResults.assetsAtRisk || 0,
+         details: iamResults.details,
+         regionStats: iamResults.regionStats || {},
+       },
+       s3: {
+         totalChecks: s3Results.totalChecks,
+         totalPassed: s3Results.totalPassed,
+         totalAssets: s3Results.totalAssets || 0,
+         assetsAtRisk: s3Results.assetsAtRisk || 0,
+         details: s3Results.details,
+         regionStats: s3Results.regionStats || {},
+       },
+       vpc: {
+         totalChecks: vpcResults.totalChecks,
+         totalPassed: vpcResults.totalPassed,
+         totalAssets: vpcResults.totalAssets || 0,
+         assetsAtRisk: vpcResults.assetsAtRisk || 0,
+         details: vpcResults.details,
+         regionStats: vpcResults.regionStats || {},
+       },
+       rds: {
+         totalChecks: rdsResults.totalChecks,
+         totalPassed: rdsResults.totalPassed,
+         totalAssets: rdsResults.totalAssets || 0,
+         assetsAtRisk: rdsResults.assetsAtRisk || 0,
+         details: rdsResults.details,
+         regionStats: rdsResults.regionStats || {},
+       },
+       lambda: {
+         totalChecks: lambdaResults.totalChecks,
+         totalPassed: lambdaResults.totalPassed,
+         totalAssets: lambdaResults.totalAssets || 0,
+         assetsAtRisk: lambdaResults.assetsAtRisk || 0,
+         details: lambdaResults.details,
+         regionStats: lambdaResults.regionStats || {},
+       },
+       cloudtrail: {
+         totalChecks: cloudTrailResults.totalChecks,
+         totalPassed: cloudTrailResults.totalPassed,
+         totalAssets: cloudTrailResults.totalAssets || 0,
+         assetsAtRisk: cloudTrailResults.assetsAtRisk || 0,
+         details: cloudTrailResults.details,
+         regionStats: cloudTrailResults.regionStats || {},
+       },
+       ebs: {
+         totalChecks: ebsResults.totalChecks,
+         totalPassed: ebsResults.totalPassed,
+         totalAssets: ebsResults.totalAssets || 0,
+         assetsAtRisk: ebsResults.assetsAtRisk || 0,
+         details: ebsResults.details,
+         regionStats: ebsResults.regionStats || {},
+       },
+       elb: {
+         totalChecks: elbResults.totalChecks,
+         totalPassed: elbResults.totalPassed,
+         totalAssets: elbResults.totalAssets || 0,
+         assetsAtRisk: elbResults.assetsAtRisk || 0,
+         details: elbResults.details,
+         regionStats: elbResults.regionStats || {},
+       },
+       sns: {
+         totalChecks: snsResults.totalChecks,
+         totalPassed: snsResults.totalPassed,
+         totalAssets: snsResults.totalAssets || 0,
+         assetsAtRisk: snsResults.assetsAtRisk || 0,
+         details: snsResults.details,
+         regionStats: snsResults.regionStats || {},
+       },
+       sqs: {
+         totalChecks: sqsResults.totalChecks,
+         totalPassed: sqsResults.totalPassed,
+         totalAssets: sqsResults.totalAssets || 0,
+         assetsAtRisk: sqsResults.assetsAtRisk || 0,
+         details: sqsResults.details,
+         regionStats: sqsResults.regionStats || {},
+       },
+     },
+     totalChecks,
+     totalPassed,
+     regionStats // Top-level region stats
+   };
 
     // Generate a unique ID for this scan result
     const scanId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -250,7 +288,7 @@ app.post('/api/run-security-checks', async (req, res) => {
     res.status(500).json({ error: error.message || 'Failed to run security checks' });
   }
 });
-
+tard
 // New endpoint to fetch scan results by ID
 app.get('/api/get-security-results/:scanId', (req, res) => {
     const { scanId } = req.params;

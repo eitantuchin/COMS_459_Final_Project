@@ -62,33 +62,46 @@
                                                 <div class="score-text">{{ animatedScore }}</div>
                                                 <div class="score-max">/100</div>
                                             </div>
-                                            <div class="score-label" :style="{ color: ringColor }">{{ scoreLabel }}</div>
+                                            <div class="score-label" :style="{ color: ringColor }">{{ scoreLabel }}
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="score-details">
                                         <p class="score-description">
-                                            This score reflects the overall security posture of your AWS assets based on our
+                                            This score reflects the overall security posture of your AWS assets based on
+                                            our
                                             comprehensive scan.
                                         </p>
                                         <div class="score-info">
                                             <h3>What Does This Score Mean?</h3>
                                             <p>
-                                                Your security score is a comprehensive metric that evaluates the security posture
-                                        of your AWS environment. It takes into account various factors such as the
-                                        configuration of your resources, the presence of security best practices, and
-                                        the results of automated security checks. A higher score indicates a stronger
-                                        security posture, while a lower score suggests areas that need improvement. The
-                                        score is designed to give you a quick overview of your security status, helping
-                                        you prioritize actions to enhance your cloud security.
+                                                Your security score is a comprehensive metric that evaluates the
+                                                security posture
+                                                of your AWS environment. It takes into account various factors such as
+                                                the
+                                                configuration of your resources, the presence of security best
+                                                practices, and
+                                                the results of automated security checks. A higher score indicates a
+                                                stronger
+                                                security posture, while a lower score suggests areas that need
+                                                improvement. The
+                                                score is designed to give you a quick overview of your security status,
+                                                helping
+                                                you prioritize actions to enhance your cloud security.
                                             </p>
                                             <h3>How Is It Calculated?</h3>
-                                            <p>The score is calculated by running a series of security checks across your AWS
-                                        services. Each check is weighted based on its importance, and the final score is
-                                        the percentage of checks that passed successfully. The checks cover a wide range
-                                        of security aspects, including but not limited to: encryption, access control,
-                                        logging, and monitoring. The weighting ensures that critical security issues
-                                        have a greater impact on the score, encouraging you to address the most
-                                        significant risks first.</p>
+                                            <p>The score is calculated by running a series of security checks across
+                                                your AWS
+                                                services. Each check is weighted based on its importance, and the final
+                                                score is
+                                                the percentage of checks that passed successfully. The checks cover a
+                                                wide range
+                                                of security aspects, including but not limited to: encryption, access
+                                                control,
+                                                logging, and monitoring. The weighting ensures that critical security
+                                                issues
+                                                have a greater impact on the score, encouraging you to address the most
+                                                significant risks first.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -117,16 +130,20 @@
                                             </div>
                                             <div class="assets-progress">
                                                 <div class="progress-bar">
-                                                    <div class="progress-safe" :style="{ width: safeBarWidth + '%' }"></div>
-                                                    <div class="progress-at-risk" :style="{ width: atRiskBarWidth + '%' }">
+                                                    <div class="progress-safe" :style="{ width: safeBarWidth + '%' }">
+                                                    </div>
+                                                    <div class="progress-at-risk"
+                                                        :style="{ width: atRiskBarWidth + '%' }">
                                                     </div>
                                                 </div>
                                                 <div class="progress-legend">
                                                     <span class="legend-item safe">
-                                                        <span class="legend-dot"></span>Safe {{ Math.round(safePercentage) }}%
+                                                        <span class="legend-dot"></span>Safe {{
+                                                            Math.round(safePercentage) }}%
                                                     </span>
                                                     <span class="legend-item at-risk">
-                                                        <span class="legend-dot"></span>At Risk {{ Math.round(atRiskPercentage) }}%
+                                                        <span class="legend-dot"></span>At Risk {{
+                                                            Math.round(atRiskPercentage) }}%
                                                     </span>
                                                 </div>
                                             </div>
@@ -143,7 +160,8 @@
                                                 <span class="service-risk">{{ service.assetsAtRisk }} assets</span>
                                             </div>
                                             <div class="service-bar-container">
-                                                <div class="service-bar" :style="{ width: serviceBarWidths[index] + '%' }">
+                                                <div class="service-bar"
+                                                    :style="{ width: serviceBarWidths[index] + '%' }">
                                                 </div>
                                             </div>
                                         </div>
@@ -158,8 +176,7 @@
                                 <div class="section-card chart-card">
                                     <h2 class="section-title">Service Security Scores</h2>
                                     <div class="service-scores-container">
-                                        <div v-for="service in serviceScores" :key="service.name"
-                                            class="service-score">
+                                        <div v-for="service in serviceScores" :key="service.name" class="service-score">
                                             <div class="score-container small">
                                                 <svg class="progress-ring" width="100" height="100">
                                                     <circle class="progress-ring__background" cx="50" cy="50" r="40" />
@@ -181,18 +198,36 @@
                                 </div>
                                 <!-- Card 2: Placeholder -->
                                 <div class="section-card chart-card">
-                                    <h2 class="section-title">Asset Safety</h2>
-                                    <div class="chart-placeholder">Pie Chart: Safe vs. At-Risk (To be implemented)</div>
+                                    <h2 class="section-title">Top 2 Services at Risk by Region</h2>
+                                    <canvas id="topServicesAtRiskBarChart" width="400" height="300"></canvas>
                                 </div>
-                                <!-- Card 3: Placeholder -->
+                                <!-- Card 3: Bar Chart - Assets at Risk per Region -->
                                 <div class="section-card chart-card">
-                                    <h2 class="section-title">Vulnerable Services</h2>
-                                    <div class="chart-placeholder">Bar Chart: Assets at Risk per Service (To be implemented)</div>
+                                    <h2 class="section-title">Assets at Risk by Region</h2>
+                                    <canvas id="regionAssetsAtRiskChart" width="400" height="400"></canvas>
                                 </div>
-                                <!-- Card 4: Placeholder -->
                                 <div class="section-card chart-card">
-                                    <h2 class="section-title">Asset Distribution</h2>
-                                    <div class="chart-placeholder">Stacked Bar Chart: Safe vs. At-Risk per Service (To be implemented)</div>
+                                    <h2 class="section-title">Region Security Scores</h2>
+                                    <div class="service-scores-container">
+                                        <div v-for="region in regionScores" :key="region.name" class="service-score">
+                                            <div class="score-container small">
+                                                <svg class="progress-ring" width="100" height="100">
+                                                    <circle class="progress-ring__background" cx="50" cy="50" r="40" />
+                                                    <circle class="progress-ring__fill" :style="{
+                                                        strokeDasharray: `${regionCircumference} ${regionCircumference}`,
+                                                        strokeDashoffset: region.strokeDashoffset,
+                                                        stroke: region.ringColor
+                                                    }" cx="50" cy="50" r="40" />
+                                                    <circle class="progress-ring__inner" cx="50" cy="50" r="32" />
+                                                </svg>
+                                                <div class="score-content">
+                                                    <div class="score-text small">{{ Math.round(region.score) }}</div>
+                                                    <div class="score-max small">/100</div>
+                                                </div>
+                                            </div>
+                                            <div class="service-label">{{ region.name }}</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
