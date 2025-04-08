@@ -78,7 +78,7 @@ export default {
       async startProgress() {
         this.showProgress = true;
         this.isScanning = true;
-        this.progressMessage = 'Authenticating...';
+        this.progressMessage = 'Authenticating and Running Processes...';
         const messages = [
           'Scanning AWS services...',
           'Checking security measures...',

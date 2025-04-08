@@ -243,6 +243,8 @@
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    overflow-y:auto;
 }
 
 .section-card.score {
@@ -661,24 +663,12 @@
     }
 }
 
-.overview-content, .charts-content, .score-analysis-content {
+.overview-content, .charts-content, .recommendation-content {
     display: flex;
     width: 100%;
     gap: 20px;
 }
 
-.score-analysis-content {
-    justify-content: center;
-    align-items: center;
-    height: 845px; /* Match the score card height */
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    text-align: center;
-    font-size: 18px;
-    color: #666;
-}
 
 /* Existing CSS from your original code is assumed to be included */
 /* Adding new styles for the Charts tab */
@@ -812,4 +802,205 @@
 /* Rotate arrow when dropdown is open (requires JS or custom styling workaround) */
 .custom-dropdown:focus + .dropdown-container::after {
     transform: translateY(-50%) rotate(180deg);
+}
+
+/* Recommendation Tab Specific Styles */
+.recommendation-content {
+    width: 100%;
+    padding: 0; /* Remove padding to align with other tabs */
+}
+
+.recommendation-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Two columns side by side */
+    grid-gap: 20px;
+    width: 100%;
+    height: 800px; /* Match the height of other tab content like the score card */
+}
+
+/* Recommendation Card Enhancements */
+.recommendation-card {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center content horizontally */
+    padding: 25px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0; /* Subtle border */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Section Title */
+.recommendation-card .section-title {
+    text-align: center;
+    width: 100%;
+    font-size: 24px;
+    color: #006EDC;
+    position: relative;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.recommendation-card .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 3px;
+    background: linear-gradient(to right, #006EDC, #2AACEC);
+    border-radius: 2px;
+}
+
+/* Content Styling */
+.score-analysis-content, .steps-content {
+    width: 100%;
+    font-size: 15px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.intro-text {
+    font-size: 16px;
+    color: #333;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.intro-text strong {
+    color: #006EDC;
+}
+
+/* Analysis List */
+.analysis-details {
+    width: 100%;
+}
+
+.description {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.analysis-list-wrapper {
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.analysis-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #e6e6e6;
+    transition: background 0.3s ease;
+}
+
+.analysis-item:last-child {
+    border-bottom: none;
+}
+
+.analysis-item:hover {
+    background: #f0f4fa;
+}
+
+.item-number {
+    font-weight: 600;
+    color: #006EDC;
+    margin-right: 10px;
+    min-width: 20px;
+}
+
+.item-text {
+    flex: 1;
+    color: #333;
+}
+
+.item-count {
+    font-size: 13px;
+    color: #888;
+    margin-left: 10px;
+}
+
+.footer-text {
+    font-size: 13px;
+    color: #777;
+    text-align: center;
+}
+
+/* Steps List */
+.steps-list-wrapper {
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #e6e6e6;
+    transition: background 0.3s ease;
+}
+
+.step-item:last-child {
+    border-bottom: none;
+}
+
+.step-item:hover {
+    background: #f0f4fa;
+}
+
+.step-number {
+    font-weight: 600;
+    color: #006EDC;
+    margin-right: 10px;
+    min-width: 20px;
+}
+
+.step-text {
+    flex: 1;
+    color: #333;
+}
+
+.no-steps {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 10px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .recommendation-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .recommendation-card {
+        min-height: auto;
+    }
+
+    .analysis-item, .step-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px;
+    }
+
+    .item-number, .step-number {
+        margin-bottom: 5px;
+    }
+
+    .item-count {
+        margin-left: 0;
+        margin-top: 5px;
+    }
 }

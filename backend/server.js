@@ -1,8 +1,10 @@
 process.env.AWS_SDK_JS_SUPPRESS_MAINTENANCE_MODE_MESSAGE = '1';
 
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const AWS = require('aws-sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { runEc2Checks } = require('./checks/ec2_checks');
 const { runIamChecks } = require('./checks/iam_checks');
 const { runS3Checks } = require('./checks/s3_checks');
@@ -16,10 +18,15 @@ const { runSnsChecks } = require('./checks/sns_checks');
 const { runSqsChecks } = require('./checks/sqs_checks');
 
 const app = express();
-const port = 3000;
-const scanResultsStore = new Map();
+const port = 8080;
 app.use(express.json());
 app.use(cors());
+app.listen(port, () => {
+    console.log(`Backend server running on http://localhost:${port}`);
+});
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const scanResultsStore = new Map();
 
 // API endpoint to check if an AWS Account ID exists
 app.post('/api/check-aws-info', async (req, res) => {
@@ -178,6 +185,62 @@ app.post('/api/run-security-checks', async (req, res) => {
    addRegionStats(cloudTrailResults, 'cloudtrail');
    // Note: IAM, S3, CloudTrail are typically global or not fully region-specific
 
+// Aggregate all details
+    const allDetails = [
+        ...(ec2Results.details || []),
+        ...(iamResults.details || []),
+        ...(s3Results.details || []),
+        ...(vpcResults.details || []),
+        ...(rdsResults.details || []),
+        ...(lambdaResults.details || []),
+        ...(cloudTrailResults.details || []),
+        ...(ebsResults.details || []),
+        ...(elbResults.details || []),
+        ...(snsResults.details || []),
+        ...(sqsResults.details || []),
+    ].map(detail => detail.message).join('\n');
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // First Prompt: Score Analysis (unchanged)
+    const systemMessageAnalysis = `
+      You are an AWS security expert. Analyze the following list of security check results from an AWS environment. 
+      Extract the 10 most common issues or patterns, excluding specific identifiers like resource names, ARNs, or regions. 
+      Return the results as a JSON array of objects with "message" (the generalized issue) and "count" (number of occurrences).
+      Focus on recurring security themes rather than unique identifiers.
+    `;
+    const analysisPrompt = `${systemMessageAnalysis}\n\n${allDetails}`;
+    const aiAnalysisResponse = await model.generateContent(analysisPrompt);
+    const aiAnalysisText = await aiAnalysisResponse.response.text();
+    let aiAnalysis;
+    try {
+      const jsonMatch = aiAnalysisText.match(/\[.*\]/s);
+      aiAnalysis = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+    } catch (error) {
+      console.error('Error parsing Gemini analysis response:', error);
+      aiAnalysis = [];
+    }
+
+    // Second Prompt: Steps To Take
+    const systemMessageSteps = `
+      You are an AWS security expert. Based on the following security check results from an AWS environment, 
+      determine the top 5 actionable steps the user should take to secure their AWS resources. 
+      Provide clear, concise, and prioritized steps, focusing on addressing the most critical or common issues identified. 
+      Exclude specific identifiers like resource names, ARNs, or regions in the steps. 
+      Return the results as a JSON array of strings, where each string is a step.
+    `;
+    const stepsPrompt = `${systemMessageSteps}\n\n${allDetails}`;
+    const aiStepsResponse = await model.generateContent(stepsPrompt);
+    const aiStepsText = await aiStepsResponse.response.text();
+    let aiSteps;
+    try {
+      const jsonMatch = aiStepsText.match(/\[.*\]/s);
+      aiSteps = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+    } catch (error) {
+      console.error('Error parsing Gemini steps response:', error);
+      aiSteps = [];
+    }
+
+
    const result = {
      securityScore: securityScore.toFixed(2),
      totalAssets,
@@ -274,7 +337,9 @@ app.post('/api/run-security-checks', async (req, res) => {
      },
      totalChecks,
      totalPassed,
-     regionStats // Top-level region stats
+     regionStats, 
+     aiScoreAnalysis: aiAnalysis,
+     aiStepsToTake: aiSteps // New field for steps
    };
 
     // Generate a unique ID for this scan result
@@ -288,7 +353,7 @@ app.post('/api/run-security-checks', async (req, res) => {
     res.status(500).json({ error: error.message || 'Failed to run security checks' });
   }
 });
-tard
+
 // New endpoint to fetch scan results by ID
 app.get('/api/get-security-results/:scanId', (req, res) => {
     const { scanId } = req.params;
@@ -300,7 +365,3 @@ app.get('/api/get-security-results/:scanId', (req, res) => {
   
     res.json(result);
   });
-
-app.listen(port, () => {
-  console.log(`Backend server running on http://localhost:${port}`);
-});

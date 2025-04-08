@@ -19,7 +19,7 @@ export default {
             panelItems: [
                 { label: 'Overview', content: 'overview', icon: 'fas fa-home' },
                 { label: 'Charts', content: 'charts', icon: 'fas fa-chart-bar' },
-                { label: 'Score Analysis', content: 'analysis', icon: 'fas fa-search' }
+                { label: 'Recommendation', content: 'analysis', icon: 'fas fa-search' }
             ],
             regionAssetsAtRiskChart: null,
             topServicesAtRiskBarChart: null,

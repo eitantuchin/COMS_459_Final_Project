@@ -216,16 +216,70 @@
                                         <select class="custom-dropdown" @change="updateRegion($event.target.value)"
                                             v-model="selectedRegion">
                                             <option v-for="region in allRegions" :key="region" :value="region">{{ region
-                                                }}</option>
+                                            }}</option>
                                         </select>
                                     </div>
                                     <canvas id="regionAssetsBreakdownChart" width="400" height="300"></canvas>
                                 </div>
                             </div>
                         </div>
-                        <!-- Score Analysis Tab Content -->
-                        <div v-else-if="activePanel === 2" class="score-analysis-content">
-                            <p>Score Analysis content will be implemented later.</p>
+                        <!-- Recommendation Tab Content -->
+                        <div v-else-if="activePanel === 2" class="recommendation-content">
+                            <div class="recommendation-grid">
+                                <!-- Score Analysis Card -->
+                                <div class="section-card recommendation-card">
+                                    <h2 class="section-title">Score Analysis</h2>
+                                    <div class="score-analysis-content">
+                                        <p class="intro-text" v-if="results.securityScore">
+                                            Your current security score is <strong>{{ roundedScore }}/100</strong> ({{
+                                            scoreLabel }}).
+                                        </p>
+                                        <p class="intro-text" v-else>Loading score data...</p>
+                                        <div v-if="results.securityScore" class="analysis-details">
+                                            <p class="description">
+                                                Below is a list of the 10 most common security issues or patterns
+                                                identified by an analysis across your AWS services. Specific identifiers
+                                                (e.g., resource names, regions) have been excluded for clarity.
+                                            </p>
+                                            <div class="analysis-list-wrapper">
+                                                <div v-for="(item, index) in results.aiScoreAnalysis" :key="index"
+                                                    class="analysis-item">
+                                                    <span class="item-number">{{ index + 1 }}.</span>
+                                                    <span class="item-text">{{ item.message }}</span>
+                                                    <span class="item-count">({{ item.count }} time{{ item.count > 1 ?
+                                                        's' : '' }})</span>
+                                                </div>
+                                            </div>
+                                            <p class="footer-text">
+                                                This list highlights recurring themes in your security
+                                                posture based on detailed scan results. Use it to prioritize remediation
+                                                efforts.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Steps To Take Card -->
+                                <div class="section-card recommendation-card">
+                                    <h2 class="section-title">Steps To Take</h2>
+                                    <div class="steps-content">
+                                        <p class="intro-text">
+                                            Based on an analysis of your AWS security check results, here are the top
+                                            recommended actions to improve your security posture:
+                                        </p>
+                                        <div class="steps-list-wrapper">
+                                            <div v-for="(step, index) in results.aiStepsToTake" :key="index"
+                                                class="step-item">
+                                                <span class="step-number">{{ index + 1 }}.</span>
+                                                <span class="step-text">{{ step }}</span>
+                                            </div>
+                                            <p v-if="!results.aiStepsToTake || results.aiStepsToTake.length === 0"
+                                                class="no-steps">
+                                                Loading steps or no steps generated...
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
