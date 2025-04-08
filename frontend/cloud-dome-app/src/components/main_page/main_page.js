@@ -45,7 +45,7 @@ export default {
         }
   
         try {
-          const response = await fetch('http://localhost:3000/api/check-aws-info', {
+          const response = await fetch('https://backend-service-106601605987.us-central1.run.app/api/check-aws-info', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -116,7 +116,7 @@ export default {
       },
       async runSecurityChecks() {
         try {
-          const response = await fetch('http://localhost:3000/api/run-security-checks', {
+          const response = await fetch('https://backend-service-106601605987.us-central1.run.app/api/run-security-checks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

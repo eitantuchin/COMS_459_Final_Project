@@ -289,7 +289,7 @@ export default {
                 return;
             }
             try {
-                const response = await fetch(`http://localhost:3000/api/get-security-results/${scanId}`);
+                const response = await fetch(`https://backend-service-106601605987.us-central1.run.app/api/get-security-results/${scanId}`);
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.error || 'Failed to fetch scan results');
