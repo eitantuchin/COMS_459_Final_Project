@@ -207,27 +207,19 @@
                                     <canvas id="regionAssetsAtRiskChart" width="400" height="400"></canvas>
                                 </div>
                                 <div class="section-card chart-card">
-                                    <h2 class="section-title">Region Security Scores</h2>
-                                    <div class="service-scores-container">
-                                        <div v-for="region in regionScores" :key="region.name" class="service-score">
-                                            <div class="score-container small">
-                                                <svg class="progress-ring" width="100" height="100">
-                                                    <circle class="progress-ring__background" cx="50" cy="50" r="40" />
-                                                    <circle class="progress-ring__fill" :style="{
-                                                        strokeDasharray: `${regionCircumference} ${regionCircumference}`,
-                                                        strokeDashoffset: region.strokeDashoffset,
-                                                        stroke: region.ringColor
-                                                    }" cx="50" cy="50" r="40" />
-                                                    <circle class="progress-ring__inner" cx="50" cy="50" r="32" />
-                                                </svg>
-                                                <div class="score-content">
-                                                    <div class="score-text small">{{ Math.round(region.score) }}</div>
-                                                    <div class="score-max small">/100</div>
-                                                </div>
-                                            </div>
-                                            <div class="service-label">{{ region.name }}</div>
-                                        </div>
+                                    <h2 class="section-title">Assets at Risk Trend Across Regions</h2>
+                                    <canvas id="assetsAtRiskTrendChart" width="400" height="300"></canvas>
+                                </div>
+                                <div class="section-card chart-card">
+                                    <h2 class="section-title">Assets Breakdown by Region</h2>
+                                    <div class="dropdown-container">
+                                        <select class="custom-dropdown" @change="updateRegion($event.target.value)"
+                                            v-model="selectedRegion">
+                                            <option v-for="region in allRegions" :key="region" :value="region">{{ region
+                                                }}</option>
+                                        </select>
                                     </div>
+                                    <canvas id="regionAssetsBreakdownChart" width="400" height="300"></canvas>
                                 </div>
                             </div>
                         </div>

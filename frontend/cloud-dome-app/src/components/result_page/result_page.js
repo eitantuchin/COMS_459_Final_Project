@@ -20,7 +20,12 @@ export default {
                 { label: 'Overview', content: 'overview', icon: 'fas fa-home' },
                 { label: 'Charts', content: 'charts', icon: 'fas fa-chart-bar' },
                 { label: 'Score Analysis', content: 'analysis', icon: 'fas fa-search' }
-            ]
+            ],
+            regionAssetsAtRiskChart: null,
+            topServicesAtRiskBarChart: null,
+            assetsAtRiskTrendChart: null,
+            regionAssetsBreakdownChart: null,
+            selectedRegion: null,
         };
     },
     computed: {
@@ -92,31 +97,10 @@ export default {
         serviceCircumference() {
             return 2 * Math.PI * 40;
         },
-        regionScores() {
+        allRegions() {
             const services = this.results.services || {};
-            const allRegions = [...new Set(Object.values(services).flatMap(s => Object.keys(s.regionStats || {})))];
-
-            return allRegions.map(region => {
-                let totalChecks = 0;
-                let totalPassed = 0;
-
-                Object.values(services).forEach(service => {
-                    const regionStats = service.regionStats?.[region] || {};
-                    totalChecks += regionStats.totalChecks || service.totalChecks || 0;
-                    totalPassed += regionStats.totalPassed || service.totalPassed || 0;
-                });
-
-                const score = totalChecks > 0 ? (totalPassed / totalChecks) * 100 : 0;
-                const circumference = 2 * Math.PI * 40;
-                const progress = score / 100;
-                const strokeDashoffset = circumference * (1 - progress);
-                const ringColor = this.getRingColor(score);
-                return { name: region, score, strokeDashoffset, ringColor };
-            }).filter(region => region.score > 0); // Filter out regions with no checks
+            return [...new Set(Object.values(services).flatMap(s => Object.keys(s.regionStats || {})))];
         },
-        regionCircumference() {
-            return 2 * Math.PI * 40;
-        }
     },
     methods: {
         showDropdown() {
@@ -317,12 +301,123 @@ export default {
                     if (this.activePanel === 1) {
                         this.initRegionAssetsAtRiskChart();
                         this.initTopServicesAtRiskBarChart();
+                        this.initAssetsAtRiskTrendChart();
                     }
                 });
             } catch (error) {
                 console.error('Error fetching scan results:', error);
                 this.$router.push({ path: '/' });
             }
+        },
+        initAssetsAtRiskTrendChart() {
+            const canvas = document.getElementById('assetsAtRiskTrendChart');
+            if (!canvas) {
+                console.warn('Canvas #assetsAtRiskTrendChart not found.');
+                return;
+            }
+            const ctx = canvas.getContext('2d');
+            const services = this.results.services || {};
+            const allRegions = [...new Set(Object.values(services).flatMap(s => Object.keys(s.regionStats || {})))];
+        
+            const datasets = Object.entries(services).map(([serviceName], index) => {
+                const data = allRegions.map(region => {
+                    const regionStats = services[serviceName].regionStats?.[region] || {};
+                    return regionStats.assetsAtRisk || 0;
+                });
+                return {
+                    label: serviceName.toUpperCase(),
+                    data,
+                    borderColor: `hsl(${(index * 137.508) % 360}, 70%, 50%)`,
+                    fill: false,
+                    tension: 0.1
+                };
+            });
+        
+            if (this.assetsAtRiskTrendChart) {
+                this.assetsAtRiskTrendChart.destroy();
+            }
+        
+            this.assetsAtRiskTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allRegions,
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Region' } },
+                        y: { beginAtZero: true, title: { display: true, text: 'Assets at Risk' } }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: context => `${context.dataset.label}: ${context.raw} assets at risk`
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        initRegionAssetsBreakdownChart() {
+            const canvas = document.getElementById('regionAssetsBreakdownChart');
+            if (!canvas) {
+                console.warn('Canvas #regionAssetsBreakdownChart not found.');
+                return;
+            }
+            const ctx = canvas.getContext('2d');
+            const services = this.results.services || {};
+            const allRegions = [...new Set(Object.values(services).flatMap(s => Object.keys(s.regionStats || {})))];
+
+            // Default to first region if not set
+            if (!this.selectedRegion) {
+                this.selectedRegion = allRegions[0];
+            }
+
+            let totalAssets = 0;
+            let assetsAtRisk = 0;
+            Object.values(services).forEach(service => {
+                const regionStats = service.regionStats?.[this.selectedRegion] || {};
+                totalAssets += regionStats.totalAssets || 0;
+                assetsAtRisk += regionStats.assetsAtRisk || 0;
+            });
+            const safeAssets = totalAssets - assetsAtRisk;
+
+            if (this.regionAssetsBreakdownChart) {
+                this.regionAssetsBreakdownChart.destroy();
+            }
+
+            this.regionAssetsBreakdownChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['At Risk', 'Safe'],
+                    datasets: [{
+                        data: [assetsAtRisk, safeAssets],
+                        backgroundColor: ['#FF6384', '#36A2EB'],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: `Assets in ${this.selectedRegion}` },
+                        tooltip: {
+                            callbacks: {
+                                label: context => `${context.label}: ${context.raw} (${((context.raw / totalAssets) * 100).toFixed(1)}%)`
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        updateRegion(region) {
+            this.selectedRegion = region;
+            this.initRegionAssetsBreakdownChart();
         },
 
         setActivePanel(index) {
@@ -331,20 +426,13 @@ export default {
                 this.$nextTick(() => {
                     this.initRegionAssetsAtRiskChart();
                     this.initTopServicesAtRiskBarChart();
+                    this.initAssetsAtRiskTrendChart();
+                    this.initRegionAssetsBreakdownChart(); // Add for Card 5
                 });
             }
-        }
+        },
     },
     mounted() {
         this.fetchResults();
     },
-    beforeDestroy() {
-        // Clean up charts when component is destroyed
-        if (this.regionAssetsAtRiskChart) {
-            this.regionAssetsAtRiskChart.destroy();
-        }
-        if (this.topServicesAtRiskBarChart) {
-            this.topServicesAtRiskBarChart.destroy();
-        }
-    }
 };

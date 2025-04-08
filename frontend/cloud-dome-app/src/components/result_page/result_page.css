@@ -761,3 +761,55 @@
     max-width: 100%;
     max-height: 300px; /* Adjust height as needed */
 }
+
+.dropdown-container {
+    position: relative;
+    width: 200px; /* Fixed width for consistency */
+    margin: 10px 0; /* Spacing above and below */
+}
+
+.custom-dropdown {
+    appearance: none; /* Remove default browser styling */
+    width: 100%;
+    padding: 10px 15px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+    color: #1a1a1a; /* Dark text for readability */
+    background-color: #fff;
+    border: 1px solid #e0e0e0; /* Light gray border */
+    border-radius: 6px; /* Rounded corners */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Hover effect */
+.custom-dropdown:hover {
+    border-color: #006EDC; /* Primary blue on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Focus effect */
+.custom-dropdown:focus {
+    outline: none;
+    border-color: #006EDC;
+    box-shadow: 0 0 0 2px rgba(0, 110, 220, 0.2); /* Blue glow */
+}
+
+/* Add a custom arrow */
+.dropdown-container::after {
+    content: '▼';
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #666; /* Gray arrow */
+    pointer-events: none; /* Prevents interference with dropdown */
+    transition: transform 0.3s ease;
+}
+
+/* Rotate arrow when dropdown is open (requires JS or custom styling workaround) */
+.custom-dropdown:focus + .dropdown-container::after {
+    transform: translateY(-50%) rotate(180deg);
+}
