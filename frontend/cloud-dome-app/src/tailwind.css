@@ -1,3 +1,93 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply flex flex-col min-h-screen m-0;
+  }
+}
+
+@layer components {
+  .progress-ring__background {
+    fill: none;
+    stroke: #e6ecef;
+    stroke-width: 20;
+    transition: stroke 0.3s ease;
+  }
+  .progress-ring__fill {
+    fill: none;
+    stroke-width: 20;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 1.5s ease-out, stroke 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+  .progress-ring__inner {
+    fill: #fff;
+    stroke: none;
+    transition: fill 0.3s ease;
+  }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 600px) {
+    .tooltip {
+      @apply w-[250px] -right-[115px];
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .recommendation-grid {
+      @apply grid-cols-1 h-auto;
+    }
+    .recommendation-card {
+      @apply min-h-auto;
+    }
+    .analysis-item, .step-item {
+      @apply flex-col items-start p-3.5;
+    }
+    .item-number, .step-number {
+      @apply mb-1.5;
+    }
+    .item-count {
+      @apply ml-0 mt-1.5;
+    }
+    .panel {
+      @apply w-full h-auto mb-5;
+    }
+    .panel-item {
+      @apply p-2.5;
+    }
+    .assets-stats {
+      @apply flex-col gap-3.5;
+    }
+    .stat-item {
+      @apply w-full;
+    }
+    .section-card.score {
+      @apply h-auto p-3.5;
+    }
+    .score-container {
+      @apply w-[180px] h-[180px];
+    }
+    .score-text {
+      @apply text-4xl sm:text-[48px];
+    }
+    .score-label {
+      @apply text-base sm:text-[18px];
+    }
+  }
+  
+  .dropdown-container::after {
+    content: '▼';
+    @apply absolute top-1/2 right-3.5 -translate-y-1/2 text-xs text-gray-600 pointer-events-none transition-transform duration-300;
+  }
+  .custom-dropdown:focus + .dropdown-container::after {
+    @apply -translate-y-1/2 rotate-180;
+  }
