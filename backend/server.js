@@ -22,7 +22,7 @@ const app = express();
 const port = 8080;
 app.use(express.json());
 app.use(cors({
-  origin: 'https://cloud-dome-456202.web.app/',
+  origin: 'https://cloud-dome-456202.web.app',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
