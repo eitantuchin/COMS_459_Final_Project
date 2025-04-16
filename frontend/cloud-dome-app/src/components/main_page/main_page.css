@@ -1,74 +1,51 @@
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
 
 body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; /* Ensure the body takes up at least the full viewport height */
-    margin: 0; /* Reset default body margin */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
 }
 
 .main-container {
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  flex-grow: 1; /* Allow main-container to take up remaining space */
+  flex-grow: 1;
 }
 
 .header {
-  min-width: 100vh;
+  position: relative;
   width: 100%;
-  height: 700px;
+  min-height: 60vh;
   background: linear-gradient(to right top, #006EDC, rgba(42, 172, 234, 1) 75%);
-  position: absolute;/* Kept fixed to stay at top */
-  top: 0;
-  left: 0;
   display: flex;
   flex-direction: column;
-  z-index: 10; /* Ensure header stays above content */
-}
-
-.footer {
-    background-color: #0d1b29;
-    padding: 20px;
-    min-width: 100vh;
-    width: 98.4%;
-    z-index: 10; /* Ensure it's above other content if needed */
-    margin-left: -10px;
-    margin-bottom: -10px;
-}
-
-.footer-copyright {
-    display: flex;
-    justify-content: center;
-    text-align: center; /* Optional: center the text within the footer */
-}
-  
-.footer p {
-    font-size: 14px; 
-    color: rgb(255, 255, 255)
+  z-index: 10;
 }
 
 .top-nav {
-  padding: 20px 40px;
+  padding: 2% 5%;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .top-left-nav {
-    display: flex;
-    flex-direction: row;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 .logo {
-    color: white;
-    font-size: 30px;
-    font-weight: bold;
-    background: none; /* remove default button background */
-    border: none; /* remove default button border */
-    padding: 0; /*remove default padding*/
-    cursor: pointer; /*make sure it appears clickable*/
-    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; /*inherit font*/
+  color: white;
+  font-size: 1.8rem;
+  font-weight: bold;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .nav-links {
@@ -79,8 +56,8 @@ body {
 .nav-links a {
   color: white;
   text-decoration: none;
-  font-size: 16px;
-  margin-left: 20px;
+  font-size: 1rem;
+  margin-left: 1.5rem;
 }
 
 .dropdown {
@@ -100,8 +77,8 @@ body {
 }
 
 .arrow {
-  margin-left: 5px;
-  font-size: 12px;
+  margin-left: 0.3rem;
+  font-size: 0.75rem;
   transition: transform 0.3s ease;
 }
 
@@ -111,10 +88,10 @@ body {
 
 .resources-dropdown-menu {
   position: absolute;
-  top: calc(100%);
+  top: calc(100% + 0.5rem);
   right: 0;
   background: white;
-  min-width: 160px;
+  min-width: 10rem;
   box-shadow: 0 8px 16px rgba(0,0,0,0.2);
   z-index: 1;
   border-radius: 4px;
@@ -122,12 +99,11 @@ body {
 
 .resources-dropdown-menu a {
   display: block;
-  padding: 10px 15px;
+  padding: 0.6rem 1rem;
   margin: 0;
-  font-size: 14px;
+  font-size: 0.9rem;
   color: #006EDC;
   transition: background-color 0.3s ease;
-
 }
 
 .resources-dropdown-menu a:hover {
@@ -135,99 +111,100 @@ body {
 }
 
 .header-content {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between; /* Important: keeps space between text and image */
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 2% 5%;
+  flex-wrap: wrap;
 }
 
 .text-container {
   text-align: left;
   color: white;
+  max-width: 50%;
 }
 
 .page-title {
-  font-size: 39px;
+  font-size: 2.5rem;
   font-weight: bold;
-  margin-left: 120px;
-  margin-bottom: 20px;
-  padding: 120px 40px 0;
+  margin: 0 10%;
+  padding: 5vh 5%;
 }
 
 .title-description {
-  font-size: 22px;
-  margin-bottom: 30px;
-  margin-left: 120px;
-  padding: 0px 40px 0;
+  font-size: 1.2rem;
+  margin: 0 10%;
+  padding: 0 5%;
+  margin-bottom: 2rem;
 }
 
 .title-button-wrapper {
-    padding: 0px 40px 0;
+  padding: 0 5%;
 }
 
 .title-button {
   background: white;
   color: #006EDC;
   border: none;
-  padding: 15px 30px;
-  font-size: 20px;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
   font-weight: bold;
   border-radius: 5px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   transition: transform 0.2s ease;
-  margin-left: 120px;
+  margin: 0 10%;
 }
 
 .title-button:hover {
   transform: translateY(-2px);
 }
-  
+
 .main-image {
-    width: 800px;
-    height: 450px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 10px 0 0 10px;
-    margin-top: 80px; /* Adjust this value to push it down */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-width: 50%;
+  height: auto;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  margin-top: 2rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .icon-image {
-    height: 50px;
-    margin-right: 10px;
-    cursor: pointer;
+  height: 3rem;
+  margin-right: 0.6rem;
+  cursor: pointer;
 }
 
-/* New styles for scrollable content */
 .main-content {
+  padding: 5% 5%;
   display: flex;
-  flex-direction: column; /* Changed to column to stack sections vertically */
-  align-items: center; /* Center the sections horizontally */
-  margin-top: 700px; /* Offset for fixed header height */
-  padding: 40px;
-  
+  flex-direction: column;
+  align-items: center;
 }
 
 .clouddome-impact {
-  margin-bottom: 110px;
-  width: 60%;
+  width: 90%;
+  max-width: 1200px;
+  margin-bottom: 5vh;
 }
 
 .clouddome-impact p {
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.6;
 }
 
-/* New styles for the process steps (from screenshot) */
 .process-steps-section {
-  width: 60%; /* Match the width of clouddome-impact for consistency */
-  margin-bottom: 40px; /* Add some spacing below the section */
-
+  width: 90%;
+  max-width: 1200px;
+  margin-bottom: 5vh;
 }
 
 .process-steps {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .step {
@@ -235,32 +212,32 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  flex: 1;
+  min-width: 100px;
 }
 
 .step-number {
-  width: 40px;
-  height: 40px;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   background-color: #f0f0f0;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 18px;
+  font-size: 1.1rem;
   font-weight: bold;
-  margin-bottom: 10px;
+  margin-bottom: 0.6rem;
 }
-
 
 .step-connector {
   flex-grow: 1;
   height: 2px;
   background-color: #ccc;
-  margin: 0 10px;
+  margin: 0 0.6rem;
 }
 
-/* Update Process Steps Styles */
 .step-connector.active {
-  background-color: #006EDC; /* Blue when active */
+  background-color: #006EDC;
 }
 
 .step-number.active {
@@ -269,132 +246,122 @@ body {
 }
 
 .step-label {
-  font-size: 14px;
+  font-size: 0.9rem;
   color: #333;
 }
 
-/* Styles for the new AWS account ID section */
 .aws-account-section {
-    width: 60%; /* Match the width of other sections for consistency */
-    margin-bottom: 40px; /* Add spacing below the section */
-    text-align: center; /* Center the content */
-    border: 2px solid #0d1b29; /* Add a solid black outline */
-    padding: 20px; /* Add padding inside the box for spacing */
-    border-radius: 5px; /* Optional: slight rounding for a softer look */
-    position: relative;
-    overflow: visible; /* Ensure the tooltip isn’t clipped */
-  }
-  
-  .aws-account-title {
-    font-size: 24px; /* Slightly smaller than the page title but still prominent */
-    font-weight: bold;
-    color: #333; /* Dark color for contrast */
-    margin-bottom: 20px; /* Space between title and input */
-  }
-  
-  .aws-account-input-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center the input and button */
-  }
-  
-  .aws-account-input {
-    width: 300px; /* Fixed width for the input field */
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid #ccc; /* Light border for the input */
-    border-radius: 5px;
-    margin-bottom: 15px; /* Space between input and button */
-    font-family: 'Open Sans', sans-serif; /* Match the font */
-  }
-  
-  .aws-account-input:focus {
-    outline: none;
-    border-color: #006EDC; /* Highlight the input on focus with the brand color */
-    box-shadow: 0 0 5px rgba(0, 110, 220, 0.3); /* Subtle glow effect */
-  }
-  
-  .aws-account-submit {
-    background-color: #006EDC; /* Match the brand blue color */
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 5px;
-    cursor: pointer; /* Indicate it's clickable */
-    transition: background-color 0.3s ease; /* Smooth hover effect */
-  }
-  
-  .aws-account-submit:hover {
-    background-color: #005BB5; /* Slightly darker blue on hover */
-  }
-
-  /* Style for the error message */
-.error-message {
-    color: #d32f2f; /* Red color for error */
-    font-size: 14px;
-    margin-top: 2px;
-    font-family: 'Open Sans', sans-serif;
-  }
-
-  /* Style for the 2x2 grid of input fields */
-.aws-input-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* Two equal columns */
-  gap: 20px; /* Space between grid items */
-  margin-bottom: 20px; /* Space between the grid and the error message/button */
+  width: 90%;
+  max-width: 1200px;
+  margin-bottom: 5vh;
+  text-align: center;
+  border: 2px solid #0d1b29;
+  padding: 2%;
+  border-radius: 5px;
+  position: relative;
+  overflow: visible;
 }
 
-/* Style for each input group (label + input) */
+.aws-account-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 1.2rem;
+}
+
+.aws-account-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.aws-input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
 .input-group {
   display: flex;
   flex-direction: column;
 }
 
-/* Style for the labels */
 .input-group label {
-  font-size: 14px;
+  font-size: 0.9rem;
   font-weight: bold;
   color: #333;
-  margin-bottom: 5px;
-  font-family: 'Open Sans', sans-serif;
+  margin-bottom: 0.3rem;
+}
+
+.aws-account-input {
+  width: 100%;
+  padding: 0.6rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 0.9rem;
+}
+
+.aws-account-input:focus {
+  outline: none;
+  border-color: #006EDC;
+  box-shadow: 0 0 5px rgba(0, 110, 220, 0.3);
+}
+
+.aws-account-submit {
+  background-color: #006EDC;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.aws-account-submit:hover {
+  background-color: #005BB5;
+}
+
+.error-message {
+  color: #d32f2f;
+  font-size: 0.9rem;
+  margin-top: 0.2rem;
 }
 
 .privacy-message {
-  font-size: 14px;
-  color: #333; /* Darker color for more emphasis */
-  font-weight: bold; /* Make it bold */
+  font-size: 0.9rem;
+  color: #333;
+  font-weight: bold;
   text-align: center;
-  margin: 10px 0 40px 0;
-  font-family: 'Open Sans', sans-serif;
-  width: 60%;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 1rem auto;
+  width: 90%;
+  max-width: 1200px;
 }
 
 .help-icon {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 24px;
-  height: 24px;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 1.5rem;
+  height: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 }
 
-/* Style for the question mark and its circle */
 .question-mark {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 1.5rem;
+  height: 1.5rem;
   background-color: #006EDC;
   color: white;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: bold;
   border-radius: 50%;
   transition: background-color 0.3s ease;
@@ -404,75 +371,65 @@ body {
   background-color: #005BB5;
 }
 
-/* Style for the tooltip */
 .tooltip {
   position: absolute;
-  top: 30px;
-  right: 0;
+  top: 2.5rem;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
   background-color: #333;
   color: white;
-  padding: 10px;
+  padding: 0.6rem;
   border-radius: 5px;
-  width: 500px; /* Increased width to make it less tall */
+  width: 90vw;
+  max-width: 500px;
   z-index: 10;
-  font-family: 'Open Sans', sans-serif;
-  font-size: 14px;
+  font-size: 0.9rem;
   line-height: 1.5;
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-/* Show the tooltip on hover of the help icon */
 .help-icon:hover .tooltip {
   visibility: visible;
   opacity: 1;
 }
 
-/* Style for the tooltip's heading */
 .tooltip h3 {
-  font-size: 16px;
-  margin-bottom: 10px;
+  font-size: 1rem;
+  margin-bottom: 0.6rem;
   font-weight: bold;
 }
 
-/* Style for the tooltip's paragraphs */
 .tooltip p {
-  margin-bottom: 10px;
+  margin-bottom: 0.6rem;
 }
 
-/* Style for code snippets in the tooltip */
 .tooltip code {
   background-color: #555;
-  padding: 2px 4px;
+  padding: 0.2rem 0.4rem;
   border-radius: 3px;
   font-family: monospace;
 }
 
-/* Responsive adjustment for the tooltip */
-@media (max-width: 600px) {
-  .tooltip {
-    width: 250px; /* Adjusted width for smaller screens */
-    right: -115px; /* Center the tooltip on smaller screens */
-  }
-}
-
 .progress-section {
-  width: 60%; /* Match other sections */
-  margin-bottom: 20px;
+  width: 90%;
+  max-width: 1200px;
+  margin-bottom: 2rem;
   text-align: center;
 }
 
 .progress-message {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: bold;
   color: #333;
-  margin-bottom: 10px;
+  margin-bottom: 0.6rem;
 }
 
 .progress-bar {
   width: 100%;
-  height: 20px;
+  height: 1.2rem;
   background-color: #f0f0f0;
   border-radius: 10px;
   overflow: hidden;
@@ -480,6 +437,95 @@ body {
 
 .progress-fill {
   height: 100%;
-  background-color: #006EDC; /* Brand blue */
-  transition: width 0.5s ease-in-out; /* Smooth transition for width */
+  background-color: #006EDC;
+  transition: width 0.5s ease-in-out;
+}
+
+.footer {
+  background-color: #0d1b29;
+  padding: 2% 5%;
+  width: 100%;
+  z-index: 10;
+}
+
+.footer-copyright {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
+
+.footer p {
+  font-size: 0.9rem;
+  color: rgb(255, 255, 255);
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .header {
+    min-height: 80vh;
+  }
+  .header-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .text-container {
+    max-width: 100%;
+    margin-bottom: 2rem;
+  }
+  .page-title {
+    font-size: 1.8rem;
+  }
+  .title-description {
+    font-size: 1rem;
+  }
+  .title-button {
+    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
+  }
+  .main-image {
+    max-width: 90%;
+  }
+  .process-steps {
+    flex-direction: column;
+    align-items: center;
+  }
+  .step-connector {
+    display: none;
+  }
+  .aws-input-grid {
+    grid-template-columns: 1fr;
+  }
+  .tooltip {
+    width: 80vw;
+    font-size: 0.8rem;
+  }
+  .top-nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nav-links {
+    margin-top: 1rem;
+  }
+}
+
+/* Tablet */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .header-content {
+    flex-direction: column;
+    align-items: center;
+  }
+  .text-container {
+    max-width: 80%;
+    text-align: center;
+  }
+  .main-image {
+    max-width: 80%;
+  }
+  .page-title {
+    font-size: 2rem;
+  }
+  .title-description {
+    font-size: 1.1rem;
+  }
 }
