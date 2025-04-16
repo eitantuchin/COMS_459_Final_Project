@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const AWS = require('aws-sdk');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const crypto = require('crypto');
 const { runEc2Checks } = require('./checks/ec2_checks');
 const { runIamChecks } = require('./checks/iam_checks');
 const { runS3Checks } = require('./checks/s3_checks');
@@ -20,16 +21,62 @@ const { runSqsChecks } = require('./checks/sqs_checks');
 const app = express();
 const port = 8080;
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: 'https://cloud-dome-456202.web.app/',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
 app.listen(port, () => {
-    console.log(`Backend server running on http://localhost:${port}`);
+  console.log(`Backend server running on  https://backend-service-106601605987.us-central1.run.app:${port}`);
 });
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const scanResultsStore = new Map();
 
+// Generate RSA key pair
+const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: { type: 'spki', format: 'pem' },
+  privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+});
+
+// Endpoint to serve the public key
+app.get('/api/get-public-key', (req, res) => {
+  try {
+    res.json({ publicKey });
+  } catch (error) {
+    console.error('Error serving public key:', error);
+    res.status(500).json({ error: 'Failed to fetch public key' });
+  }
+});
+
+// Middleware to decrypt incoming encrypted payloads
+const decryptPayload = (req, res, next) => {
+  const { encryptedData } = req.body;
+  if (!encryptedData) {
+    return res.status(400).json({ error: 'Encrypted data is required' });
+  }
+
+  try {
+    const encryptedBuffer = Buffer.from(encryptedData, 'base64');
+    const decryptedData = crypto.privateDecrypt(
+      {
+        key: privateKey,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: 'sha256'
+      },
+      encryptedBuffer
+    );
+    req.body = JSON.parse(decryptedData.toString('utf-8'));
+    next();
+  } catch (error) {
+    console.error('Error decrypting payload:', error);
+    res.status(400).json({ error: 'Failed to decrypt payload' });
+  }
+};
+
 // API endpoint to check if an AWS Account ID exists
-app.post('/api/check-aws-info', async (req, res) => {
+app.post('/api/check-aws-info', decryptPayload, async (req, res) => {
   const { awsAccountId, awsAccessKey, awsSecretKey, awsSessionToken } = req.body;
 
   if (!awsAccountId) {
@@ -62,7 +109,7 @@ app.post('/api/check-aws-info', async (req, res) => {
 });
 
 // API endpoint to run security checks
-app.post('/api/run-security-checks', async (req, res) => {
+app.post('/api/run-security-checks', decryptPayload, async (req, res) => {
   const { awsAccountId, awsAccessKey, awsSecretKey, awsSessionToken } = req.body;
 
   if (!awsAccountId || !awsAccessKey || !awsSecretKey) {
@@ -158,50 +205,49 @@ app.post('/api/run-security-checks', async (req, res) => {
 
     const securityScore = totalChecks > 0 ? (totalPassed / totalChecks) * 100 : 0;
 
-   // Aggregate region stats from all services
-   const regionStats = {};
-   const addRegionStats = (serviceResults, serviceName) => {
-     if (serviceResults.regionStats) {
-       Object.entries(serviceResults.regionStats).forEach(([region, stats]) => {
-         if (!regionStats[region]) {
-           regionStats[region] = { totalAssets: 0, assetsAtRisk: 0 };
-         }
-         regionStats[region].totalAssets += stats.totalAssets;
-         regionStats[region].assetsAtRisk += stats.assetsAtRisk;
-       });
-     }
-   };
+    // Aggregate region stats from all services
+    const regionStats = {};
+    const addRegionStats = (serviceResults, serviceName) => {
+      if (serviceResults.regionStats) {
+        Object.entries(serviceResults.regionStats).forEach(([region, stats]) => {
+          if (!regionStats[region]) {
+            regionStats[region] = { totalAssets: 0, assetsAtRisk: 0 };
+          }
+          regionStats[region].totalAssets += stats.totalAssets;
+          regionStats[region].assetsAtRisk += stats.assetsAtRisk;
+        });
+      }
+    };
 
-   addRegionStats(ec2Results, 'ec2');
-   addRegionStats(vpcResults, 'vpc');
-   addRegionStats(rdsResults, 'rds');
-   addRegionStats(lambdaResults, 'lambda');
-   addRegionStats(ebsResults, 'ebs');
-   addRegionStats(elbResults, 'elb');
-   addRegionStats(snsResults, 'sns');
-   addRegionStats(sqsResults, 'sqs');
-   addRegionStats(iamResults, 'iam');
-   addRegionStats(s3Results, 's3');
-   addRegionStats(cloudTrailResults, 'cloudtrail');
-   // Note: IAM, S3, CloudTrail are typically global or not fully region-specific
+    addRegionStats(ec2Results, 'ec2');
+    addRegionStats(vpcResults, 'vpc');
+    addRegionStats(rdsResults, 'rds');
+    addRegionStats(lambdaResults, 'lambda');
+    addRegionStats(ebsResults, 'ebs');
+    addRegionStats(elbResults, 'elb');
+    addRegionStats(snsResults, 'sns');
+    addRegionStats(sqsResults, 'sqs');
+    addRegionStats(iamResults, 'iam');
+    addRegionStats(s3Results, 's3');
+    addRegionStats(cloudTrailResults, 'cloudtrail');
 
-// Aggregate all details
+    // Aggregate all details
     const allDetails = [
-        ...(ec2Results.details || []),
-        ...(iamResults.details || []),
-        ...(s3Results.details || []),
-        ...(vpcResults.details || []),
-        ...(rdsResults.details || []),
-        ...(lambdaResults.details || []),
-        ...(cloudTrailResults.details || []),
-        ...(ebsResults.details || []),
-        ...(elbResults.details || []),
-        ...(snsResults.details || []),
-        ...(sqsResults.details || []),
+      ...(ec2Results.details || []),
+      ...(iamResults.details || []),
+      ...(s3Results.details || []),
+      ...(vpcResults.details || []),
+      ...(rdsResults.details || []),
+      ...(lambdaResults.details || []),
+      ...(cloudTrailResults.details || []),
+      ...(ebsResults.details || []),
+      ...(elbResults.details || []),
+      ...(snsResults.details || []),
+      ...(sqsResults.details || []),
     ].map(detail => detail.message).join('\n');
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    // First Prompt: Score Analysis (unchanged)
+    // First Prompt: Score Analysis
     const systemMessageAnalysis = `
       You are an AWS security expert. Analyze the following list of security check results from an AWS environment. 
       Extract the 10 most common issues or patterns, excluding specific identifiers like resource names, ARNs, or regions. 
@@ -240,107 +286,106 @@ app.post('/api/run-security-checks', async (req, res) => {
       aiSteps = [];
     }
 
-
-   const result = {
-     securityScore: securityScore.toFixed(2),
-     totalAssets,
-     totalAssetsAtRisk,
-     services: {
-       ec2: {
-         totalChecks: ec2Results.totalChecks,
-         totalPassed: ec2Results.totalPassed,
-         totalAssets: ec2Results.totalAssets || 0,
-         assetsAtRisk: ec2Results.assetsAtRisk || 0,
-         details: ec2Results.details,
-         regionStats: ec2Results.regionStats || {},
-       },
-       iam: {
-         totalChecks: iamResults.totalChecks,
-         totalPassed: iamResults.totalPassed,
-         totalAssets: iamResults.totalAssets || 0,
-         assetsAtRisk: iamResults.assetsAtRisk || 0,
-         details: iamResults.details,
-         regionStats: iamResults.regionStats || {},
-       },
-       s3: {
-         totalChecks: s3Results.totalChecks,
-         totalPassed: s3Results.totalPassed,
-         totalAssets: s3Results.totalAssets || 0,
-         assetsAtRisk: s3Results.assetsAtRisk || 0,
-         details: s3Results.details,
-         regionStats: s3Results.regionStats || {},
-       },
-       vpc: {
-         totalChecks: vpcResults.totalChecks,
-         totalPassed: vpcResults.totalPassed,
-         totalAssets: vpcResults.totalAssets || 0,
-         assetsAtRisk: vpcResults.assetsAtRisk || 0,
-         details: vpcResults.details,
-         regionStats: vpcResults.regionStats || {},
-       },
-       rds: {
-         totalChecks: rdsResults.totalChecks,
-         totalPassed: rdsResults.totalPassed,
-         totalAssets: rdsResults.totalAssets || 0,
-         assetsAtRisk: rdsResults.assetsAtRisk || 0,
-         details: rdsResults.details,
-         regionStats: rdsResults.regionStats || {},
-       },
-       lambda: {
-         totalChecks: lambdaResults.totalChecks,
-         totalPassed: lambdaResults.totalPassed,
-         totalAssets: lambdaResults.totalAssets || 0,
-         assetsAtRisk: lambdaResults.assetsAtRisk || 0,
-         details: lambdaResults.details,
-         regionStats: lambdaResults.regionStats || {},
-       },
-       cloudtrail: {
-         totalChecks: cloudTrailResults.totalChecks,
-         totalPassed: cloudTrailResults.totalPassed,
-         totalAssets: cloudTrailResults.totalAssets || 0,
-         assetsAtRisk: cloudTrailResults.assetsAtRisk || 0,
-         details: cloudTrailResults.details,
-         regionStats: cloudTrailResults.regionStats || {},
-       },
-       ebs: {
-         totalChecks: ebsResults.totalChecks,
-         totalPassed: ebsResults.totalPassed,
-         totalAssets: ebsResults.totalAssets || 0,
-         assetsAtRisk: ebsResults.assetsAtRisk || 0,
-         details: ebsResults.details,
-         regionStats: ebsResults.regionStats || {},
-       },
-       elb: {
-         totalChecks: elbResults.totalChecks,
-         totalPassed: elbResults.totalPassed,
-         totalAssets: elbResults.totalAssets || 0,
-         assetsAtRisk: elbResults.assetsAtRisk || 0,
-         details: elbResults.details,
-         regionStats: elbResults.regionStats || {},
-       },
-       sns: {
-         totalChecks: snsResults.totalChecks,
-         totalPassed: snsResults.totalPassed,
-         totalAssets: snsResults.totalAssets || 0,
-         assetsAtRisk: snsResults.assetsAtRisk || 0,
-         details: snsResults.details,
-         regionStats: snsResults.regionStats || {},
-       },
-       sqs: {
-         totalChecks: sqsResults.totalChecks,
-         totalPassed: sqsResults.totalPassed,
-         totalAssets: sqsResults.totalAssets || 0,
-         assetsAtRisk: sqsResults.assetsAtRisk || 0,
-         details: sqsResults.details,
-         regionStats: sqsResults.regionStats || {},
-       },
-     },
-     totalChecks,
-     totalPassed,
-     regionStats, 
-     aiScoreAnalysis: aiAnalysis,
-     aiStepsToTake: aiSteps // New field for steps
-   };
+    const result = {
+      securityScore: securityScore.toFixed(2),
+      totalAssets,
+      totalAssetsAtRisk,
+      services: {
+        ec2: {
+          totalChecks: ec2Results.totalChecks,
+          totalPassed: ec2Results.totalPassed,
+          totalAssets: ec2Results.totalAssets || 0,
+          assetsAtRisk: ec2Results.assetsAtRisk || 0,
+          details: ec2Results.details,
+          regionStats: ec2Results.regionStats || {},
+        },
+        iam: {
+          totalChecks: iamResults.totalChecks,
+          totalPassed: iamResults.totalPassed,
+          totalAssets: iamResults.totalAssets || 0,
+          assetsAtRisk: iamResults.assetsAtRisk || 0,
+          details: iamResults.details,
+          regionStats: iamResults.regionStats || {},
+        },
+        s3: {
+          totalChecks: s3Results.totalChecks,
+          totalPassed: s3Results.totalPassed,
+          totalAssets: s3Results.totalAssets || 0,
+          assetsAtRisk: s3Results.assetsAtRisk || 0,
+          details: s3Results.details,
+          regionStats: s3Results.regionStats || {},
+        },
+        vpc: {
+          totalChecks: vpcResults.totalChecks,
+          totalPassed: vpcResults.totalPassed,
+          totalAssets: vpcResults.totalAssets || 0,
+          assetsAtRisk: vpcResults.assetsAtRisk || 0,
+          details: vpcResults.details,
+          regionStats: vpcResults.regionStats || {},
+        },
+        rds: {
+          totalChecks: rdsResults.totalChecks,
+          totalPassed: rdsResults.totalPassed,
+          totalAssets: rdsResults.totalAssets || 0,
+          assetsAtRisk: rdsResults.assetsAtRisk || 0,
+          details: rdsResults.details,
+          regionStats: rdsResults.regionStats || {},
+        },
+        lambda: {
+          totalChecks: lambdaResults.totalChecks,
+          totalPassed: lambdaResults.totalPassed,
+          totalAssets: lambdaResults.totalAssets || 0,
+          assetsAtRisk: lambdaResults.assetsAtRisk || 0,
+          details: lambdaResults.details,
+          regionStats: lambdaResults.regionStats || {},
+        },
+        cloudtrail: {
+          totalChecks: cloudTrailResults.totalChecks,
+          totalPassed: cloudTrailResults.totalPassed,
+          totalAssets: cloudTrailResults.totalAssets || 0,
+          assetsAtRisk: cloudTrailResults.assetsAtRisk || 0,
+          details: cloudTrailResults.details,
+          regionStats: cloudTrailResults.regionStats || {},
+        },
+        ebs: {
+          totalChecks: ebsResults.totalChecks,
+          totalPassed: ebsResults.totalPassed,
+          totalAssets: ebsResults.totalAssets || 0,
+          assetsAtRisk: ebsResults.assetsAtRisk || 0,
+          details: ebsResults.details,
+          regionStats: ebsResults.regionStats || {},
+        },
+        elb: {
+          totalChecks: elbResults.totalChecks,
+          totalPassed: elbResults.totalPassed,
+          totalAssets: elbResults.totalAssets || 0,
+          assetsAtRisk: elbResults.assetsAtRisk || 0,
+          details: elbResults.details,
+          regionStats: elbResults.regionStats || {},
+        },
+        sns: {
+          totalChecks: snsResults.totalChecks,
+          totalPassed: snsResults.totalPassed,
+          totalAssets: snsResults.totalAssets || 0,
+          assetsAtRisk: snsResults.assetsAtRisk || 0,
+          details: snsResults.details,
+          regionStats: snsResults.regionStats || {},
+        },
+        sqs: {
+          totalChecks: sqsResults.totalChecks,
+          totalPassed: sqsResults.totalPassed,
+          totalAssets: sqsResults.totalAssets || 0,
+          assetsAtRisk: sqsResults.assetsAtRisk || 0,
+          details: sqsResults.details,
+          regionStats: sqsResults.regionStats || {},
+        },
+      },
+      totalChecks,
+      totalPassed,
+      regionStats,
+      aiScoreAnalysis: aiAnalysis,
+      aiStepsToTake: aiSteps
+    };
 
     // Generate a unique ID for this scan result
     const scanId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -354,14 +399,14 @@ app.post('/api/run-security-checks', async (req, res) => {
   }
 });
 
-// New endpoint to fetch scan results by ID
+// Endpoint to fetch scan results by ID
 app.get('/api/get-security-results/:scanId', (req, res) => {
-    const { scanId } = req.params;
-    const result = scanResultsStore.get(scanId);
-  
-    if (!result) {
-      return res.status(404).json({ error: 'Scan results not found or expired' });
-    }
-  
-    res.json(result);
-  });
+  const { scanId } = req.params;
+  const result = scanResultsStore.get(scanId);
+
+  if (!result) {
+    return res.status(404).json({ error: 'Scan results not found or expired' });
+  }
+
+  res.json(result);
+});

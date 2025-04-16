@@ -132,7 +132,7 @@
 			<button class="aws-account-submit" @click="validateAwsId">Submit</button>
 			</div>
 		</section>
-		<p class="privacy-message">CloudDome never stores or saves any sensitive data that you use.</p>
+		<p class="privacy-message">CloudDome never stores or saves any sensitive data that you use.  We use encryption to ensure your data cannot be accessed.</p>
 	  </main>
 	  <footer class="footer">
 		<div class="footer-copyright">
