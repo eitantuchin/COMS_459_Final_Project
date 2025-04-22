@@ -237,7 +237,6 @@ async function runEbsChecks(credentials) {
     volumesNoKms.map(v => v.VolumeId)
   );
 
-  // Calculate total assets per region
   regions.forEach(region => {
     regionStats[region].totalAssets = allVolumes.filter(v => v.Region === region).length +
                                       allSnapshots.filter(s => s.Region === region).length;

@@ -139,11 +139,11 @@
                                                 <div class="progress-legend">
                                                     <span class="legend-item safe">
                                                         <span class="legend-dot"></span>Safe {{
-                                                            Math.round(safePercentage) }}%
+                                                        Math.round(safePercentage) }}%
                                                     </span>
                                                     <span class="legend-item at-risk">
                                                         <span class="legend-dot"></span>At Risk {{
-                                                            Math.round(atRiskPercentage) }}%
+                                                        Math.round(atRiskPercentage) }}%
                                                     </span>
                                                 </div>
                                             </div>
@@ -216,7 +216,7 @@
                                         <select class="custom-dropdown" @change="updateRegion($event.target.value)"
                                             v-model="selectedRegion">
                                             <option v-for="region in allRegions" :key="region" :value="region">{{ region
-                                            }}</option>
+                                                }}</option>
                                         </select>
                                     </div>
                                     <canvas id="regionAssetsBreakdownChart" width="400" height="300"></canvas>
@@ -271,6 +271,15 @@
                                                 class="step-item">
                                                 <span class="step-number">{{ index + 1 }}.</span>
                                                 <span class="step-text">{{ step }}</span>
+                                                <div class="step-action">
+                                                    <button v-if="!fixStatus[index]" class="fix-button"
+                                                        @click="applyFix(index, step)">
+                                                        Apply Fix
+                                                    </button>
+                                                    <span v-else class="fix-done">
+                                                        Fix Done <i class="fas fa-check-circle"></i>
+                                                    </span>
+                                                </div>
                                             </div>
                                             <p v-if="!results.aiStepsToTake || results.aiStepsToTake.length === 0"
                                                 class="no-steps">

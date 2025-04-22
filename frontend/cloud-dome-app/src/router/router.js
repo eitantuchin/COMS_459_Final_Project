@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import MainPage from '../components/main_page/main_page.vue'; // Your current main page component
-import ResultPage from '../components/result_page/result_page.vue'; // Your result page component
+import MainPage from '../components/main_page/main_page.vue'; 
+import ResultPage from '../components/result_page/result_page.vue'; 
 
 const routes = [
   {

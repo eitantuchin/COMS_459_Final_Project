@@ -19,15 +19,15 @@ const { runSnsChecks } = require('./checks/sns_checks');
 const { runSqsChecks } = require('./checks/sqs_checks');
 
 const app = express();
-const port = 8080;
+const port = 3000;
 app.use(express.json());
 app.use(cors({
-  origin: 'https://cloud-dome-456202.web.app',
+  origin: 'http://localhost:8080',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
 app.listen(port, () => {
-  console.log(`Backend server running on  https://backend-service-106601605987.us-central1.run.app:${port}`);
+  console.log(`Backend server running on  http://localhost:${port}`);
 });
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -40,7 +40,6 @@ const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
   privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
 });
 
-// Endpoint to serve the public key
 app.get('/api/get-public-key', (req, res) => {
   try {
     res.json({ publicKey });
@@ -50,7 +49,6 @@ app.get('/api/get-public-key', (req, res) => {
   }
 });
 
-// Middleware to decrypt incoming encrypted payloads
 const decryptPayload = (req, res, next) => {
   const { encryptedData } = req.body;
   if (!encryptedData) {
@@ -75,7 +73,6 @@ const decryptPayload = (req, res, next) => {
   }
 };
 
-// API endpoint to check if an AWS Account ID exists
 app.post('/api/check-aws-info', decryptPayload, async (req, res) => {
   const { awsAccountId, awsAccessKey, awsSecretKey, awsSessionToken } = req.body;
 
@@ -108,7 +105,6 @@ app.post('/api/check-aws-info', decryptPayload, async (req, res) => {
   }
 });
 
-// API endpoint to run security checks
 app.post('/api/run-security-checks', decryptPayload, async (req, res) => {
   const { awsAccountId, awsAccessKey, awsSecretKey, awsSessionToken } = req.body;
 
@@ -150,7 +146,6 @@ app.post('/api/run-security-checks', decryptPayload, async (req, res) => {
       runSqsChecks(credentials),
     ]);
 
-    // Aggregate totals across all services
     const totalChecks =
       ec2Results.totalChecks +
       iamResults.totalChecks +
@@ -205,7 +200,6 @@ app.post('/api/run-security-checks', decryptPayload, async (req, res) => {
 
     const securityScore = totalChecks > 0 ? (totalPassed / totalChecks) * 100 : 0;
 
-    // Aggregate region stats from all services
     const regionStats = {};
     const addRegionStats = (serviceResults, serviceName) => {
       if (serviceResults.regionStats) {
@@ -231,7 +225,6 @@ app.post('/api/run-security-checks', decryptPayload, async (req, res) => {
     addRegionStats(s3Results, 's3');
     addRegionStats(cloudTrailResults, 'cloudtrail');
 
-    // Aggregate all details
     const allDetails = [
       ...(ec2Results.details || []),
       ...(iamResults.details || []),
@@ -391,7 +384,6 @@ app.post('/api/run-security-checks', decryptPayload, async (req, res) => {
     const scanId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     scanResultsStore.set(scanId, result);
 
-    // Return the ID instead of the full result
     res.json({ scanId });
   } catch (error) {
     console.error('Error running security checks:', error);
@@ -399,7 +391,6 @@ app.post('/api/run-security-checks', decryptPayload, async (req, res) => {
   }
 });
 
-// Endpoint to fetch scan results by ID
 app.get('/api/get-security-results/:scanId', (req, res) => {
   const { scanId } = req.params;
   const result = scanResultsStore.get(scanId);
@@ -409,4 +400,25 @@ app.get('/api/get-security-results/:scanId', (req, res) => {
   }
 
   res.json(result);
+});
+
+
+app.post('/api/generate-fix-code', async (req, res) => {
+  const { prompt } = req.body;
+
+  if (!prompt) {
+    return res.status(400).json({ error: 'Prompt is required' });
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const aiResponse = await model.generateContent(prompt);
+    const aiText = await aiResponse.response.text();
+
+    // Extract code (assuming AI returns plain code without markdown)
+    res.json({ code: aiText.trim() });
+  } catch (error) {
+    console.error('Error generating fix code:', error);
+    res.status(500).json({ error: 'Failed to generate fix code' });
+  }
 });

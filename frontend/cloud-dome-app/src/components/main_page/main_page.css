@@ -3,15 +3,15 @@
 body {
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Ensure the body takes up at least the full viewport height */
-    margin: 0; /* Reset default body margin */
+    min-height: 100vh; 
+    margin: 0;
 }
 
 .main-container {
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  flex-grow: 1; /* Allow main-container to take up remaining space */
+  flex-grow: 1; 
 }
 
 .header {
@@ -19,12 +19,12 @@ body {
   width: 100%;
   height: 700px;
   background: linear-gradient(to right top, #006EDC, rgba(42, 172, 234, 1) 75%);
-  position: absolute;/* Kept fixed to stay at top */
+  position: absolute;
   top: 0;
   left: 0;
   display: flex;
   flex-direction: column;
-  z-index: 10; /* Ensure header stays above content */
+  z-index: 10; 
 }
 
 .footer {
@@ -32,7 +32,7 @@ body {
     padding: 20px;
     min-width: 100vh;
     width: 98.4%;
-    z-index: 10; /* Ensure it's above other content if needed */
+    z-index: 10; 
     margin-left: -10px;
     margin-bottom: -10px;
 }
@@ -40,7 +40,7 @@ body {
 .footer-copyright {
     display: flex;
     justify-content: center;
-    text-align: center; /* Optional: center the text within the footer */
+    text-align: center;
 }
   
 .footer p {
@@ -64,10 +64,10 @@ body {
     color: white;
     font-size: 30px;
     font-weight: bold;
-    background: none; /* remove default button background */
-    border: none; /* remove default button border */
-    padding: 0; /*remove default padding*/
-    cursor: pointer; /*make sure it appears clickable*/
+    background: none;
+    border: none; 
+    padding: 0; 
+    cursor: pointer;
     font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; /*inherit font*/
 }
 
@@ -137,7 +137,7 @@ body {
 .header-content {
     display: flex;
     flex-direction: row;
-    justify-content: space-between; /* Important: keeps space between text and image */
+    justify-content: space-between; 
 }
 
 .text-container {
@@ -187,7 +187,7 @@ body {
     height: 450px;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px 0 0 10px;
-    margin-top: 80px; /* Adjust this value to push it down */
+    margin-top: 80px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -197,12 +197,12 @@ body {
     cursor: pointer;
 }
 
-/* New styles for scrollable content */
+
 .main-content {
   display: flex;
-  flex-direction: column; /* Changed to column to stack sections vertically */
-  align-items: center; /* Center the sections horizontally */
-  margin-top: 700px; /* Offset for fixed header height */
+  flex-direction: column;
+  align-items: center; 
+  margin-top: 700px;
   padding: 40px;
   
 }
@@ -217,10 +217,10 @@ body {
   line-height: 1.6;
 }
 
-/* New styles for the process steps (from screenshot) */
+
 .process-steps-section {
-  width: 60%; /* Match the width of clouddome-impact for consistency */
-  margin-bottom: 40px; /* Add some spacing below the section */
+  width: 60%; 
+  margin-bottom: 40px; 
 
 }
 
@@ -258,9 +258,9 @@ body {
   margin: 0 10px;
 }
 
-/* Update Process Steps Styles */
+
 .step-connector.active {
-  background-color: #006EDC; /* Blue when active */
+  background-color: #006EDC; 
 }
 
 .step-number.active {
@@ -273,86 +273,82 @@ body {
   color: #333;
 }
 
-/* Styles for the new AWS account ID section */
 .aws-account-section {
-    width: 60%; /* Match the width of other sections for consistency */
-    margin-bottom: 40px; /* Add spacing below the section */
-    text-align: center; /* Center the content */
-    border: 2px solid #0d1b29; /* Add a solid black outline */
-    padding: 20px; /* Add padding inside the box for spacing */
-    border-radius: 5px; /* Optional: slight rounding for a softer look */
+    width: 60%; 
+    margin-bottom: 40px; 
+    text-align: center; 
+    border: 2px solid #0d1b29; 
+    padding: 20px; 
+    border-radius: 5px;
     position: relative;
-    overflow: visible; /* Ensure the tooltip isn’t clipped */
+    overflow: visible; 
   }
   
   .aws-account-title {
-    font-size: 24px; /* Slightly smaller than the page title but still prominent */
+    font-size: 24px; 
     font-weight: bold;
-    color: #333; /* Dark color for contrast */
-    margin-bottom: 20px; /* Space between title and input */
+    color: #333; 
+    margin-bottom: 20px; 
   }
   
   .aws-account-input-wrapper {
     display: flex;
     flex-direction: column;
-    align-items: center; /* Center the input and button */
+    align-items: center;
   }
   
   .aws-account-input {
-    width: 300px; /* Fixed width for the input field */
+    width: 300px; 
     padding: 10px;
     font-size: 16px;
-    border: 1px solid #ccc; /* Light border for the input */
+    border: 1px solid #ccc;
     border-radius: 5px;
-    margin-bottom: 15px; /* Space between input and button */
-    font-family: 'Open Sans', sans-serif; /* Match the font */
+    margin-bottom: 15px; 
+    font-family: 'Open Sans', sans-serif; 
   }
   
   .aws-account-input:focus {
     outline: none;
-    border-color: #006EDC; /* Highlight the input on focus with the brand color */
-    box-shadow: 0 0 5px rgba(0, 110, 220, 0.3); /* Subtle glow effect */
+    border-color: #006EDC; 
+    box-shadow: 0 0 5px rgba(0, 110, 220, 0.3); 
   }
   
   .aws-account-submit {
-    background-color: #006EDC; /* Match the brand blue color */
+    background-color: #006EDC; 
     color: white;
     border: none;
     padding: 10px 20px;
     font-size: 16px;
     font-weight: bold;
     border-radius: 5px;
-    cursor: pointer; /* Indicate it's clickable */
-    transition: background-color 0.3s ease; /* Smooth hover effect */
+    cursor: pointer; 
+    transition: background-color 0.3s ease;
   }
   
   .aws-account-submit:hover {
-    background-color: #005BB5; /* Slightly darker blue on hover */
+    background-color: #005BB5; 
   }
 
-  /* Style for the error message */
+ 
 .error-message {
-    color: #d32f2f; /* Red color for error */
+    color: #d32f2f; 
     font-size: 14px;
     margin-top: 2px;
     font-family: 'Open Sans', sans-serif;
   }
 
-  /* Style for the 2x2 grid of input fields */
 .aws-input-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* Two equal columns */
-  gap: 20px; /* Space between grid items */
-  margin-bottom: 20px; /* Space between the grid and the error message/button */
+  grid-template-columns: 1fr 1fr; 
+  gap: 20px; 
+  margin-bottom: 20px; 
 }
 
-/* Style for each input group (label + input) */
 .input-group {
   display: flex;
   flex-direction: column;
 }
 
-/* Style for the labels */
 .input-group label {
   font-size: 14px;
   font-weight: bold;
@@ -363,8 +359,8 @@ body {
 
 .privacy-message {
   font-size: 14px;
-  color: #333; /* Darker color for more emphasis */
-  font-weight: bold; /* Make it bold */
+  color: #333;
+  font-weight: bold; 
   text-align: center;
   margin: 10px 0 40px 0;
   font-family: 'Open Sans', sans-serif;
@@ -385,7 +381,6 @@ body {
   cursor: pointer;
 }
 
-/* Style for the question mark and its circle */
 .question-mark {
   display: flex;
   align-items: center;
@@ -404,7 +399,6 @@ body {
   background-color: #005BB5;
 }
 
-/* Style for the tooltip */
 .tooltip {
   position: absolute;
   top: 30px;
@@ -413,7 +407,7 @@ body {
   color: white;
   padding: 10px;
   border-radius: 5px;
-  width: 500px; /* Increased width to make it less tall */
+  width: 500px; 
   z-index: 10;
   font-family: 'Open Sans', sans-serif;
   font-size: 14px;
@@ -423,25 +417,21 @@ body {
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-/* Show the tooltip on hover of the help icon */
 .help-icon:hover .tooltip {
   visibility: visible;
   opacity: 1;
 }
 
-/* Style for the tooltip's heading */
 .tooltip h3 {
   font-size: 16px;
   margin-bottom: 10px;
   font-weight: bold;
 }
 
-/* Style for the tooltip's paragraphs */
 .tooltip p {
   margin-bottom: 10px;
 }
 
-/* Style for code snippets in the tooltip */
 .tooltip code {
   background-color: #555;
   padding: 2px 4px;
@@ -449,16 +439,15 @@ body {
   font-family: monospace;
 }
 
-/* Responsive adjustment for the tooltip */
 @media (max-width: 600px) {
   .tooltip {
-    width: 250px; /* Adjusted width for smaller screens */
-    right: -115px; /* Center the tooltip on smaller screens */
+    width: 250px;
+    right: -115px; 
   }
 }
 
 .progress-section {
-  width: 60%; /* Match other sections */
+  width: 60%;
   margin-bottom: 20px;
   text-align: center;
 }
@@ -480,6 +469,6 @@ body {
 
 .progress-fill {
   height: 100%;
-  background-color: #006EDC; /* Brand blue */
-  transition: width 0.5s ease-in-out; /* Smooth transition for width */
+  background-color: #006EDC;
+  transition: width 0.5s ease-in-out; 
 }

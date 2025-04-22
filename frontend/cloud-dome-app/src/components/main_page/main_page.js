@@ -25,7 +25,7 @@ export default {
   methods: {
     async fetchPublicKey() {
       try {
-        const response = await fetch('https://backend-service-106601605987.us-central1.run.app/api/get-public-key');
+        const response = await fetch('http://localhost:3000/api/get-public-key');
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch public key');
@@ -104,7 +104,7 @@ export default {
           awsSessionToken: this.awsSessionToken || undefined
         };
         const encryptedData = await this.encryptData(payload);
-        const response = await fetch(' https://backend-service-106601605987.us-central1.run.app/api/check-aws-info', {
+        const response = await fetch(' http://localhost:3000/api/check-aws-info', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ encryptedData })
@@ -176,7 +176,7 @@ export default {
           awsSessionToken: this.awsSessionToken || undefined
         };
         const encryptedData = await this.encryptData(payload);
-        const response = await fetch(' https://backend-service-106601605987.us-central1.run.app/api/run-security-checks', {
+        const response = await fetch(' http://localhost:3000/api/run-security-checks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ encryptedData })

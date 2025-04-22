@@ -670,8 +670,6 @@
 }
 
 
-/* Existing CSS from your original code is assumed to be included */
-/* Adding new styles for the Charts tab */
 .charts-content {
     width: 100%;
 }
@@ -684,7 +682,7 @@
 }
 
 .chart-card {
-    min-height: 400px; /* Ensure enough space for content */
+    min-height: 400px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -740,7 +738,6 @@
     justify-content: center;
 }
 
-/* Ensure section-card hover effects apply */
 .section-card.chart-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
@@ -749,44 +746,42 @@
 
 .chart-card canvas {
     max-width: 100%;
-    max-height: 300px; /* Adjust height as needed */
+    max-height: 300px; 
 }
 
 .dropdown-container {
     position: relative;
-    width: 200px; /* Fixed width for consistency */
-    margin: 10px 0; /* Spacing above and below */
+    width: 200px; 
+    margin: 10px 0;
 }
 
 .custom-dropdown {
-    appearance: none; /* Remove default browser styling */
+    appearance: none;
     width: 100%;
     padding: 10px 15px;
     font-family: 'Open Sans', sans-serif;
     font-size: 14px;
-    color: #1a1a1a; /* Dark text for readability */
+    color: #1a1a1a; 
     background-color: #fff;
-    border: 1px solid #e0e0e0; /* Light gray border */
-    border-radius: 6px; /* Rounded corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    border: 1px solid #e0e0e0;
+    border-radius: 6px; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
-/* Hover effect */
+
 .custom-dropdown:hover {
-    border-color: #006EDC; /* Primary blue on hover */
+    border-color: #006EDC;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Focus effect */
 .custom-dropdown:focus {
     outline: none;
     border-color: #006EDC;
-    box-shadow: 0 0 0 2px rgba(0, 110, 220, 0.2); /* Blue glow */
+    box-shadow: 0 0 0 2px rgba(0, 110, 220, 0.2);
 }
 
-/* Add a custom arrow */
 .dropdown-container::after {
     content: '▼';
     position: absolute;
@@ -794,39 +789,36 @@
     right: 15px;
     transform: translateY(-50%);
     font-size: 12px;
-    color: #666; /* Gray arrow */
-    pointer-events: none; /* Prevents interference with dropdown */
+    color: #666; 
+    pointer-events: none; 
     transition: transform 0.3s ease;
 }
 
-/* Rotate arrow when dropdown is open (requires JS or custom styling workaround) */
 .custom-dropdown:focus + .dropdown-container::after {
     transform: translateY(-50%) rotate(180deg);
 }
 
-/* Recommendation Tab Specific Styles */
 .recommendation-content {
     width: 100%;
-    padding: 0; /* Remove padding to align with other tabs */
+    padding: 0; 
 }
 
 .recommendation-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Two columns side by side */
+    grid-template-columns: repeat(2, 1fr); 
     grid-gap: 20px;
     width: 100%;
-    height: 800px; /* Match the height of other tab content like the score card */
+    height: 800px; 
 }
 
-/* Recommendation Card Enhancements */
 .recommendation-card {
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center; /* Center content horizontally */
+    align-items: center;
     padding: 25px;
     overflow-y: auto;
-    border: 1px solid #e0e0e0; /* Subtle border */
+    border: 1px solid #e0e0e0;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -936,7 +928,6 @@
     text-align: center;
 }
 
-/* Steps List */
 .steps-list-wrapper {
     background: #f9f9f9;
     border-radius: 6px;
@@ -978,7 +969,6 @@
     padding: 10px;
 }
 
-/* Responsive Adjustments */
 @media (max-width: 768px) {
     .recommendation-grid {
         grid-template-columns: 1fr;
@@ -1005,3 +995,69 @@
     }
 }
 
+
+.fix-button {
+    background-color: #006EDC;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-left: 10px;
+  }
+  
+  .fix-button:hover {
+    background-color: #005BB5;
+    transform: translateY(-1px);
+  }
+  
+  .fix-button:active {
+    transform: translateY(0);
+  }
+  
+  .fix-done {
+    color: #388e3c;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+  }
+  
+  .fix-done .fa-check-circle {
+    margin-left: 5px;
+    font-size: 16px;
+  }
+  
+  .step-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #e6e6e6;
+    transition: background 0.3s ease;
+    flex-wrap: wrap;
+  }
+  
+  .step-action {
+    margin-left: auto;
+  }
+  
+  @media (max-width: 768px) {
+    .step-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  
+    .step-action {
+      margin-left: 0;
+      margin-top: 10px;
+    }
+  
+    .fix-button,
+    .fix-done {
+      margin-left: 0;
+    }
+  }

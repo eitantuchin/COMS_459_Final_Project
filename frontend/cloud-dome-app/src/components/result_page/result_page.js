@@ -1,9 +1,10 @@
 import Chart from 'chart.js/auto';
-
+import AWS from 'aws-sdk';
 export default {
     name: 'ResultPage',
     data() {
         return {
+            fixStatus: {}, 
             isDropdownOpen: false,
             currentProgress: 0,
             safeBarWidth: 0,
@@ -12,10 +13,10 @@ export default {
             results: {},
             isLoaded: false,
             activePanel: 0,
-            animatedScore: 0, // New data property for animated score
-            animatedTotalAssets: 0, // New data property for animated total assets
-            animatedSafeAssets: 0, // New data property for animated safe assets
-            animatedAtRiskAssets: 0, // New data property for animated at-risk assets
+            animatedScore: 0, 
+            animatedTotalAssets: 0,
+            animatedSafeAssets: 0, 
+            animatedAtRiskAssets: 0,
             panelItems: [
                 { label: 'Overview', content: 'overview', icon: 'fas fa-home' },
                 { label: 'Charts', content: 'charts', icon: 'fas fa-chart-bar' },
@@ -82,7 +83,7 @@ export default {
             return Object.keys(this.results.services || {}).map(name => {
                 const service = this.results.services[name];
                 const score = service.totalChecks > 0 ? (service.totalPassed / service.totalChecks) * 100 : 0;
-                const circumference = 2 * Math.PI * 40; // Smaller radius for service rings
+                const circumference = 2 * Math.PI * 40; 
                 const progress = score / 100;
                 const strokeDashoffset = circumference * (1 - progress);
                 const ringColor = this.getRingColor(score);
@@ -112,12 +113,10 @@ export default {
         goToMainPage() {
             this.$router.push({ path: '/' });
         },
-        // Easing function for deceleration (ease-out)
         easeOutQuad(t) {
-            return t * (2 - t); // Quadratic ease-out
+            return t * (2 - t); 
         },
 
-        // Add this method:
         animateAll() {
             const targetScore = this.results.securityScore || 0;
             const totalAssets = this.results.totalAssets || 0;
@@ -133,7 +132,6 @@ export default {
                 const progress = Math.min((timestamp - startTime) / 1500, 1);
                 const easedProgress = this.easeOutQuad(progress);
 
-                // Update all values simultaneously
                 this.animatedScore = Math.round(targetScore * easedProgress);
                 this.currentProgress = targetScore * easedProgress;
 
@@ -163,7 +161,7 @@ export default {
             const canvas = document.getElementById('regionAssetsAtRiskChart');
             if (!canvas) {
                 console.warn('Canvas #regionAssetsAtRiskChart not found. Ensure the Charts tab is active.');
-                return; // Exit if canvas isn’t in the DOM
+                return; 
             }
             const ctx = canvas.getContext('2d');
             const regionStats = this.results.regionStats || {};
@@ -289,7 +287,7 @@ export default {
                 return;
             }
             try {
-                const response = await fetch(`https://backend-service-106601605987.us-central1.run.app/api/get-security-results/${scanId}`);
+                const response = await fetch(`http://localhost:3000/api/get-security-results/${scanId}`);
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.error || 'Failed to fetch scan results');
@@ -419,7 +417,6 @@ export default {
             this.selectedRegion = region;
             this.initRegionAssetsBreakdownChart();
         },
-
         setActivePanel(index) {
             this.activePanel = index;
             if (index === 1) {
@@ -427,10 +424,73 @@ export default {
                     this.initRegionAssetsAtRiskChart();
                     this.initTopServicesAtRiskBarChart();
                     this.initAssetsAtRiskTrendChart();
-                    this.initRegionAssetsBreakdownChart(); // Add for Card 5
+                    this.initRegionAssetsBreakdownChart();
                 });
             }
         },
+        async applyFix(index, step) {
+            try {
+              const prompt = `
+                You are an AWS security expert. Given the following recommended action to improve AWS security, 
+                provide executable JavaScript code using the AWS SDK to implement the fix. 
+                The code should be secure, follow AWS best practices, and assume the AWS SDK is already initialized 
+                with credentials (available as 'AWS'). Do not include markdown, explanations, or comments—only the 
+                executable code. If the action is too vague or cannot be automated, return an empty string.
+                
+                Action: ${step}
+              `;
+      
+              const response = await fetch('http://localhost:3000/api/generate-fix-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
+              });
+      
+              if (!response.ok) {
+                throw new Error('Failed to fetch fix code from backend');
+              }
+      
+              const data = await response.json();
+              const fixCode = data.code.trim();
+      
+              if (!fixCode) {
+                alert('This step cannot be automated. Please implement the fix manually.');
+                return;
+              }
+      
+              const allowedMethods = [
+                'CloudTrail', 'S3', 'EC2', 'IAM', 'VPC', 'RDS', 'Lambda', 'EBS', 'ELB', 'SNS', 'SQS'
+              ];
+              const isValid = allowedMethods.some(method => fixCode.includes(`AWS.${method}`));
+              if (!isValid) {
+                throw new Error('Generated code does not use recognized AWS SDK methods.');
+              }
+      
+              const credentials = JSON.parse(localStorage.getItem('awsCredentials') || '{}');
+              if (!credentials.accessKeyId || !credentials.secretAccessKey) {
+                throw new Error('AWS credentials not found. Please re-enter credentials.');
+              }
+      
+              AWS.config.update({
+                accessKeyId: credentials.accessKeyId,
+                secretAccessKey: credentials.secretAccessKey,
+                sessionToken: credentials.sessionToken || undefined,
+                region: 'us-east-1' // Default region, can be adjusted
+              });
+      
+              const fixFunction = new Function('AWS', fixCode);
+              await fixFunction(AWS);
+      
+              this.$set(this.fixStatus, index, true);
+      
+              await this.fetchResults();
+      
+              console.log(`Fix applied for step ${index + 1}: ${step}`);
+            } catch (error) {
+              console.error('Error applying fix:', error);
+              alert(`Failed to apply fix: ${error.message}`);
+            }
+          },
     },
     mounted() {
         this.fetchResults();
