@@ -1007,43 +1007,43 @@
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
     margin-left: 10px;
-  }
+}
   
-  .fix-button:hover {
+.fix-button:hover {
     background-color: #005BB5;
     transform: translateY(-1px);
-  }
+}
   
-  .fix-button:active {
+.fix-button:active {
     transform: translateY(0);
-  }
+}
   
-  .fix-done {
+.fix-done {
     color: #388e3c;
     font-size: 14px;
     font-weight: 600;
     display: flex;
     align-items: center;
     margin-left: 10px;
-  }
+}
   
-  .fix-done .fa-check-circle {
+.fix-done .fa-check-circle {
     margin-left: 5px;
     font-size: 16px;
-  }
+}
   
-  .step-item {
+.step-item {
     display: flex;
     align-items: center;
     padding: 12px;
     border-bottom: 1px solid #e6e6e6;
     transition: background 0.3s ease;
     flex-wrap: wrap;
-  }
+ }
   
-  .step-action {
+.step-action {
     margin-left: auto;
-  }
+}
   
   @media (max-width: 768px) {
     .step-item {
